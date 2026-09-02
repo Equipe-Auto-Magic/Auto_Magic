@@ -7,7 +7,7 @@
 ## 📋 Sobre o Projeto
 
 ### 🎯 O Jogo
-**Auto Magic** é um dungeon crawler tático onde você monta uma equipe de heróis e os ordena estrategicamente para atravessar calabouços automáticos. Sem controle direto em combate, o verdadeiro desafio está em **antecipar** os inimigos, compreender as sinergias de classe e criar combinações perfeitas. Esse jogo está sendo desenvolvido como um projeto para a disciplina de Programação para Jogos 1.
+**Auto Magic** é um dungeon crawler tático onde você monta uma equipe de heróis e os ordena estrategicamente para atravessar calabouços automáticos. Sem controle direto em combate, o verdadeiro desafio está em **antecipar** os inimigos, compreender as sinergias de classe e criar combinações diveridas. Esse jogo está sendo desenvolvido como um projeto para a disciplina de Programação para Jogos 1.
 
 ### 💫 Emoção & Flow
 - **Sensação:** Recompensa e domínio através da maestria estratégica
@@ -79,7 +79,7 @@
 
 ## 📅 Desenvolvimento
 
-**Semestre:** 2025<br>
+**Semestre:** 2026.1<br>
 **Disciplina:** Programação de Jogos<br>
 **Foco:** Implementação das mecânicas core e prova sólida de conceito
 
