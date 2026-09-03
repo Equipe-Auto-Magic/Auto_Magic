@@ -89,8 +89,8 @@ class MenuScene(BaseScene):
         pass
 
     def draw(self, surface: pygame.Surface):
-        # Preenchimento de Fundo
-        surface.fill(config.COLOR_BG_DARK)
+        # Fundo da Cena
+        self.draw_background(surface)
 
         # Painel Central Decorativo
         panel_rect = pygame.Rect(config.SCREEN_WIDTH // 2 - 300, 80, 600, 560)

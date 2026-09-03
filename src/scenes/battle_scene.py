@@ -35,7 +35,7 @@ class BattleScene(BaseScene):
         # Criação das Entidades (Herói à esquerda, Inimigo à direita)
         self.hero = Entity(
             name="Herói", 
-            max_hp=100, 
+            max_hp=50, 
             attack_damage=18, 
             x=hero_x, 
             y=ground_y,
@@ -142,13 +142,8 @@ class BattleScene(BaseScene):
                 print(f"Retornando ao Menu Principal em {config.RESULT_SCREEN_DELAY} segundos...\n")
 
     def draw(self, surface: pygame.Surface):
-        # Fundo da Arena de Combate
-        surface.fill(config.COLOR_BG_ARENA)
-
-        # Chão da Arena
-        ground_rect = pygame.Rect(0, 520, config.SCREEN_WIDTH, config.SCREEN_HEIGHT - 520)
-        pygame.draw.rect(surface, config.COLOR_BG_CARD, ground_rect)
-        pygame.draw.line(surface, config.COLOR_PANEL_BORDER, (0, 520), (config.SCREEN_WIDTH, 520), width=3)
+        # Fundo da Cena
+        self.draw_background(surface)
 
         # Header do Modo de Jogo
         header_surf = self.game.font_large.render("CAMPO DE BATALHA", True, config.COLOR_TEXT_PRIMARY)
