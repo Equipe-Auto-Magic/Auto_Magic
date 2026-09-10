@@ -3,13 +3,12 @@
 > **Um dungeon crawler tático com auto battle onde a estratégia prévia determina a vitória.**
 
 **Auto Magic** é um Produto Mínimo Viável (MVP) de um jogo 2D no estilo *Auto Battler* com elementos de RPG, construído em Python 3 utilizando a biblioteca **Pygame-CE** (Pygame Community Edition).
-
 ---
 
 ## 📋 Sobre o Projeto
 
 ### 🎯 O Jogo
-**Auto Magic** é um dungeon crawler tático onde você monta uma equipe de heróis e os ordena estrategicamente para atravessar calabouços automáticos. Sem controle direto em combate, o verdadeiro desafio está em **antecipar** os inimigos, compreender as sinergias de classe e criar combinações perfeitas.
+**Auto Magic** é um dungeon crawler tático onde você monta uma equipe de heróis e os ordena estrategicamente para atravessar calabouços automáticos. Sem controle direto em combate, o verdadeiro desafio está em **antecipar** os inimigos, compreender as sinergias de classe e criar combinações divertidas. Esse jogo está sendo desenvolvido como um projeto para a disciplina de Programação para Jogos 1.
 
 ### 💫 Emoção & Flow
 - **Sensação:** Recompensa e domínio através da maestria estratégica
@@ -34,7 +33,6 @@
 - **Loop de Combate por Cooldown**: Ataques periódicos e simultâneos a cada 1.5s com exibição de logs de dano no console do terminal.
 - **Condição de Fim de Batalha**: Tela overlay de **VITÓRIA!** ou **DERROTA!** e retorno automático ao Menu Principal após 3 segundos.
 - **FPS**: Renderização cravada a 60 FPS com controle de Delta Time.
-
 ---
 
 ## 🕹️ 30 Segundos de Gameplay
@@ -113,7 +111,6 @@ run.bat
 ```
 
 ---
-
 ## 📦 Versão 1.0 (Prova de Conceito)
 
 ### ✅ Incluído
@@ -133,7 +130,7 @@ run.bat
 
 ## 📅 Desenvolvimento
 
-**Semestre:** 2025<br>
+**Semestre:** 2026.1<br>
 **Disciplina:** Programação de Jogos<br>
 **Foco:** Implementação das mecânicas core e prova sólida de conceito
 
