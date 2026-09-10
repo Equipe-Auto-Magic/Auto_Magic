@@ -4,54 +4,128 @@ from src import config
 
 class Entity:
     """
-    Representa uma entidade do jogo (Herói ou Inimigo) com atributos RPG,
-    temporizador de ataque (cooldown) e métodos de renderização de UI.
+    Classe base de uma entidade do jogo (Herói ou Inimigo).
+
+    Atributos de Combate:
+        max_hp, current_hp, attack_damage, attack_cooldown
+
+    Atributos de Movimentação (novos):
+        speed        -- velocidade em pixels/segundo (0 = estático)
+        attack_range -- distância em pixels para iniciar ataque
+        state        -- 'andando' | 'atacando'
+        target       -- referência à entidade alvo (Entity | None)
+
+    Arquitetura Escalável:
+        A lógica de aproximação vive em _move_towards_target(), um método
+        protegido que subclasses podem sobrescrever (ex: Atirador pode querer
+        MANTER distância em vez de se aproximar).
+        speed=0 por padrão mantém Entity base completamente estática —
+        ideal para Magos/Atiradores que atacam de longe sem andar.
     """
-    def __init__(self, name: str, max_hp: int, attack_damage: int, 
+    def __init__(self, name: str, max_hp: int, attack_damage: int,
                  x: int, y: int, width: int = 100, height: int = 140,
                  color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW,
-                 attack_cooldown: float = config.ATTACK_COOLDOWN_DEFAULT):
+                 attack_cooldown: float = config.ATTACK_COOLDOWN_DEFAULT,
+                 speed: float = 0.0,
+                 attack_range: float = 0.0):
         self.name = name
         self.max_hp = max_hp
         self.current_hp = max_hp
         self.attack_damage = attack_damage
         self.attack_cooldown = attack_cooldown
         self.cooldown_timer = 0.0
-        
-        # Posição e Dimensões
-        self.x = x
-        self.y = y
+
+        # Posição e Dimensões (x/y como float para movimento suave)
+        self.x = float(x)
+        self.y = float(y)
         self.width = width
         self.height = height
-        self.rect = pygame.Rect(x, y, width, height)
-        
+        self.rect = pygame.Rect(int(x), int(y), width, height)
+
         # Cores e Estilo
         self.color = color
         self.shadow_color = shadow_color
-        
+
         # Efeitos visuais simples
         self.flash_timer = 0.0
         self.shake_offset_x = 0
         self.shake_offset_y = 0
 
+        # --- Atributos de Movimentação e Estado ---
+        self.speed = speed               # pixels por segundo
+        self.attack_range = attack_range # distância em pixels para atacar
+        self.state = 'andando' if speed > 0 else 'atacando'
+        self.target: 'Entity | None' = None
+
+    # ------------------------------------------------------------------
+    # Alvo
+    # ------------------------------------------------------------------
+
+    def set_target(self, target: 'Entity'):
+        """Define o alvo desta entidade."""
+        self.target = target
+
+    # ------------------------------------------------------------------
+    # Movimentação (método protegido — subclasses podem sobrescrever)
+    # ------------------------------------------------------------------
+
+    def _move_towards_target(self, dt: float):
+        """
+        Aproxima a entidade do alvo se a distância for maior que attack_range.
+        - Enquanto andando: pausa o cooldown de ataque (reinicia para 0).
+        - Ao alcançar o alvo: muda estado para 'atacando' e permite o combate.
+
+        Subclasses como Atirador podem sobrescrever para MANTER distância.
+        Entidades com speed=0 nunca ativam este método (já nascem em 'atacando').
+        """
+        if self.target is None or not self.target.is_alive() or self.speed == 0:
+            return
+
+        # Distância entre as bordas dos retângulos (borda a borda, não centro)
+        dist = abs(self.target.x - self.x) - self.width
+
+        if dist > self.attack_range:
+            self.state = 'andando'
+            # Pausa o cooldown enquanto em movimento
+            self.cooldown_timer = 0.0
+            direction = 1.0 if self.target.x > self.x else -1.0
+            self.x += direction * self.speed * dt
+            self.rect.x = int(self.x)
+        else:
+            self.state = 'atacando'
+
+    # ------------------------------------------------------------------
+    # Update principal
+    # ------------------------------------------------------------------
+
     def update(self, dt: float):
-        """Atualiza temporizadores e estados internos da entidade."""
+        """Atualiza movimentação, estado e temporizadores da entidade."""
         if not self.is_alive():
             return
 
-        # Acumula o tempo para o ataque
-        self.cooldown_timer += dt
+        # 1. Movimentação e verificação de alcance
+        self._move_towards_target(dt)
 
-        # Atualiza efeito de piscar (flash de dano)
+        # 2. Acumula cooldown SOMENTE quando em estado de ataque
+        if self.state == 'atacando':
+            self.cooldown_timer += dt
+
+        # 3. Efeito de piscar (flash de dano)
         if self.flash_timer > 0:
             self.flash_timer -= dt
 
+    # ------------------------------------------------------------------
+    # Combate
+    # ------------------------------------------------------------------
+
     def can_attack(self) -> bool:
-        """Verifica se o tempo de cooldown foi atingido."""
-        return self.is_alive() and self.cooldown_timer >= self.attack_cooldown
+        """Verifica se está em alcance, vivo e com cooldown completo."""
+        return (self.is_alive()
+                and self.state == 'atacando'
+                and self.cooldown_timer >= self.attack_cooldown)
 
     def reset_cooldown(self):
-        """Reinicia o temporizador de ataque mantendo eventual tempo restante."""
+        """Reinicia o temporizador de ataque mantendo eventual tempo residual."""
         self.cooldown_timer %= self.attack_cooldown
 
     def take_damage(self, amount: int):
@@ -62,6 +136,10 @@ class Entity:
     def is_alive(self) -> bool:
         """Retorna True se o personagem tiver HP superior a 0."""
         return self.current_hp > 0
+
+    # ------------------------------------------------------------------
+    # Helpers de UI
+    # ------------------------------------------------------------------
 
     def get_hp_percentage(self) -> float:
         """Retorna a porcentagem de vida restante entre 0.0 e 1.0."""
@@ -79,10 +157,14 @@ class Entity:
         else:
             return config.COLOR_HP_LOW
 
+    # ------------------------------------------------------------------
+    # Renderização
+    # ------------------------------------------------------------------
+
     def draw(self, surface: pygame.Surface, font_bold: pygame.font.Font, font_small: pygame.font.Font):
         """Desenha o corpo do personagem, nome, barra de vida e medidor de cooldown."""
-        draw_x = self.x + self.shake_offset_x
-        draw_y = self.y + self.shake_offset_y
+        draw_x = int(self.x) + self.shake_offset_x
+        draw_y = int(self.y) + self.shake_offset_y
 
         # Sombra sob o personagem
         shadow_rect = pygame.Rect(draw_x + 5, draw_y + 10, self.width, self.height)
@@ -93,6 +175,12 @@ class Entity:
         char_rect = pygame.Rect(draw_x, draw_y, self.width, self.height)
         pygame.draw.rect(surface, main_color, char_rect, border_radius=12)
         pygame.draw.rect(surface, config.COLOR_PANEL_BORDER, char_rect, width=2, border_radius=12)
+
+        # Indicador de Estado ('→' andando | '⚔' atacando)
+        state_icon = "→" if self.state == 'andando' else "⚔"
+        state_surf = font_small.render(state_icon, True, config.COLOR_TEXT_GOLD)
+        state_rect = state_surf.get_rect(center=(draw_x + self.width // 2, draw_y - self.height + 70))
+        surface.blit(state_surf, state_rect)
 
         # Nome do Personagem (Acima do retângulo)
         name_surf = font_bold.render(self.name, True, config.COLOR_TEXT_PRIMARY)
@@ -136,7 +224,7 @@ class Entity:
             cd_bg_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_bar_width, cd_bar_height)
             pygame.draw.rect(surface, config.COLOR_HP_BG, cd_bg_rect, border_radius=3)
 
-            # Progresso do Cooldown (0.0 até 1.0)
+            # Progresso do Cooldown (0.0 até 1.0) — congelado enquanto andando
             cd_pct = min(1.0, self.cooldown_timer / self.attack_cooldown)
             cd_fill_width = int(cd_bar_width * cd_pct)
             if cd_fill_width > 0:
@@ -148,3 +236,57 @@ class Entity:
             dmg_surf = font_small.render(dmg_str, True, config.COLOR_TEXT_SECONDARY)
             dmg_rect = dmg_surf.get_rect(center=(draw_x + self.width // 2, cd_bar_y + 18))
             surface.blit(dmg_surf, dmg_rect)
+
+
+# ----------------------------------------------------------------------
+# Subclasses de Entidade
+# ----------------------------------------------------------------------
+
+class Warrior(Entity):
+    """
+    Guerreiro corpo-a-corpo.
+
+    Herda toda a lógica de Entity. Nasce com velocidade e alcance melee
+    configurados via config.py. Para balancear basta alterar as constantes
+    WARRIOR_SPEED e WARRIOR_ATTACK_RANGE.
+
+    Futuras classes derivadas:
+        class Mage(Entity):    speed=0, attack_range=350, ...
+        class Archer(Entity):  speed=0, attack_range=500, ...
+    """
+    def __init__(self, name: str, max_hp: int, attack_damage: int,
+                 x: int, y: int, **kwargs):
+        super().__init__(
+            name=name,
+            max_hp=max_hp,
+            attack_damage=attack_damage,
+            x=x,
+            y=y,
+            speed=config.WARRIOR_SPEED,
+            attack_range=config.WARRIOR_ATTACK_RANGE,
+            **kwargs
+        )
+class Mage(Entity):
+    """
+    Mago corpo-a-corpo.
+
+    Herda toda a lógica de Entity. Nasce com velocidade e alcance melee
+    configurados via config.py. Para balancear basta alterar as constantes
+    MAGE_SPEED e MAGE_ATTACK_RANGE.
+
+    Futuras classes derivadas:
+        class Mage(Entity):    speed=0, attack_range=350, ...
+        class Archer(Entity):  speed=0, attack_range=500, ...
+    """
+    def __init__(self, name: str, max_hp: int, attack_damage: int,
+                 x: int, y: int, **kwargs):
+        super().__init__(
+            name=name,
+            max_hp=max_hp,
+            attack_damage=attack_damage,
+            x=x,
+            y=y,
+            speed=config.MAGE_SPEED,
+            attack_range=config.MAGE_ATTACK_RANGE,
+            **kwargs
+        )

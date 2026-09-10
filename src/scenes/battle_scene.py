@@ -1,6 +1,6 @@
 import pygame
 from src import config
-from src.entity import Entity
+from src.entity import Warrior, Mage
 from src.scenes.base_scene import BaseScene
 
 class FloatingText:
@@ -26,34 +26,51 @@ class BattleScene(BaseScene):
     """Cena de Batalha (Auto Battler RPG)."""
     def __init__(self, game):
         super().__init__(game)
-        
-        # Posições dos Personagens na Arena
-        hero_x = 220
-        enemy_x = config.SCREEN_WIDTH - 220 - 100
+
+        # Guerreiros nascem nos extremos opostos da tela
+        hero_x = 180
+        mage_x = hero_x - 120 # Mago fica atrás do herói
+        enemy_x = config.SCREEN_WIDTH - 80 - 100  # desconta a largura do sprite
         ground_y = 380
 
-        # Criação das Entidades (Herói à esquerda, Inimigo à direita)
-        self.hero = Entity(
-            name="Herói", 
-            max_hp=50, 
-            attack_damage=18, 
-            x=hero_x, 
+        # Criação dos Guerreiros (Warrior herda movimentação melee de Entity)
+        self.hero = Warrior(
+            name="Herói",
+            max_hp=50,
+            attack_damage=18,
+            x=hero_x,
             y=ground_y,
             color=config.COLOR_HERO,
             shadow_color=config.COLOR_HERO_SHADOW,
             attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT
         )
 
-        self.enemy = Entity(
-            name="Inimigo", 
-            max_hp=110, 
-            attack_damage=15, 
-            x=enemy_x, 
+        self.mage = Mage(
+            name="Mago",
+            max_hp=30,
+            attack_damage=12,
+            x=mage_x,
+            y=ground_y,
+            color=config.COLOR_MAGE,
+            shadow_color=config.COLOR_MAGE_SHADOW,
+            attack_cooldown=2.0 # Mago ataca um pouco mais lento
+        )
+
+        self.enemy = Warrior(
+            name="Inimigo",
+            max_hp=110,
+            attack_damage=15,
+            x=enemy_x,
             y=ground_y,
             color=config.COLOR_ENEMY,
             shadow_color=config.COLOR_ENEMY_SHADOW,
             attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT
         )
+
+        # Define alvos cruzados para o sistema de movimentação
+        self.hero.set_target(self.enemy)
+        self.mage.set_target(self.enemy)
+        self.enemy.set_target(self.hero)
 
         # Estado da Batalha
         self.is_battle_over = False
@@ -66,8 +83,9 @@ class BattleScene(BaseScene):
 
         print("\n==========================================")
         print("⚔️  A BATALHA AUTOMÁTICA COMEÇOU!")
-        print(f"Herói HP: {self.hero.max_hp} | ATK: {self.hero.attack_damage}")
-        print(f"Inimigo HP: {self.enemy.max_hp} | ATK: {self.enemy.attack_damage}")
+        print(f"Herói  HP: {self.hero.max_hp} | ATK: {self.hero.attack_damage} | VEL: {self.hero.speed}px/s | ALCANCE: {self.hero.attack_range}px")
+        print(f"Mago   HP: {self.mage.max_hp} | ATK: {self.mage.attack_damage} | VEL: {self.mage.speed}px/s | ALCANCE: {self.mage.attack_range}px")
+        print(f"Inimigo HP: {self.enemy.max_hp} | ATK: {self.enemy.attack_damage} | VEL: {self.enemy.speed}px/s | ALCANCE: {self.enemy.attack_range}px")
         print("==========================================\n")
 
     def handle_event(self, event: pygame.event.Event):
@@ -86,8 +104,9 @@ class BattleScene(BaseScene):
                 self.game.change_scene(MenuScene(self.game))
             return
 
-        # Atualiza o estado das entidades (acumula o cooldown de ataque)
+        # Atualiza o estado das entidades (movimentação + cooldown de ataque)
         self.hero.update(dt)
+        self.mage.update(dt)
         self.enemy.update(dt)
 
         # Atualiza textos flutuantes
@@ -96,42 +115,66 @@ class BattleScene(BaseScene):
             if ft.is_dead():
                 self.floating_texts.remove(ft)
 
-        # --- LOOP DE COMBATE BASEADO EM COOLDOWN (1.5s) ---
-        # Ambos atacam simultaneamente se ambos estiverem prontos
+        # --- LOOP DE COMBATE (só executa quando ambos estão em alcance) ---
         hero_ready = self.hero.can_attack()
+        mage_ready = self.mage.can_attack()
         enemy_ready = self.enemy.can_attack()
 
-        if hero_ready or enemy_ready:
+        if hero_ready or mage_ready or enemy_ready:
             # Herói causa dano ao Inimigo
             if hero_ready:
                 self.enemy.take_damage(self.hero.attack_damage)
                 self.hero.reset_cooldown()
-                print(f"⚔️ [COMBATE] Herói causou {self.hero.attack_damage} de dano a Inimigo! (HP Inimigo: {self.enemy.current_hp}/{self.enemy.max_hp})")
-                
-                # Adiciona texto flutuante de dano no inimigo
+                print(f"⚔️  [COMBATE] Herói causou {self.hero.attack_damage} de dano! "
+                      f"(HP Inimigo: {self.enemy.current_hp}/{self.enemy.max_hp})")
+
+                # Texto flutuante posicionado dinamicamente sobre o inimigo
                 self.floating_texts.append(
-                    FloatingText(f"-{self.hero.attack_damage}", self.enemy.x + 30, self.enemy.y - 10, config.COLOR_HP_LOW)
+                    FloatingText(f"-{self.hero.attack_damage}",
+                                 int(self.enemy.x) + 30,
+                                 int(self.enemy.y) - 10,
+                                 config.COLOR_HP_LOW)
                 )
 
-            # Inimigo causa dano ao Herói
-            if enemy_ready:
-                self.hero.take_damage(self.enemy.attack_damage)
-                self.enemy.reset_cooldown()
-                print(f"⚔️ [COMBATE] Inimigo causou {self.enemy.attack_damage} de dano a Herói! (HP Herói: {self.hero.current_hp}/{self.hero.max_hp})")
-                
-                # Adiciona texto flutuante de dano no herói
+            # Mago causa dano ao Inimigo
+            if mage_ready:
+                self.enemy.take_damage(self.mage.attack_damage)
+                self.mage.reset_cooldown()
+                print(f"✨  [COMBATE] Mago causou {self.mage.attack_damage} de dano! "
+                      f"(HP Inimigo: {self.enemy.current_hp}/{self.enemy.max_hp})")
+
+                # Texto flutuante
                 self.floating_texts.append(
-                    FloatingText(f"-{self.enemy.attack_damage}", self.hero.x + 30, self.hero.y - 10, config.COLOR_HP_LOW)
+                    FloatingText(f"-{self.mage.attack_damage}",
+                                 int(self.enemy.x) + 50,
+                                 int(self.enemy.y) - 30,
+                                 config.COLOR_MAGE) # Cor do dano do mago
+                )
+
+            # Inimigo causa dano ao Herói (ou ao Mago se o herói morrer)
+            if enemy_ready:
+                target = self.hero if self.hero.is_alive() else self.mage
+                target.take_damage(self.enemy.attack_damage)
+                self.enemy.reset_cooldown()
+                print(f"⚔️  [COMBATE] Inimigo causou {self.enemy.attack_damage} de dano! "
+                      f"(HP {target.name}: {target.current_hp}/{target.max_hp})")
+
+                # Texto flutuante posicionado dinamicamente sobre o alvo
+                self.floating_texts.append(
+                    FloatingText(f"-{self.enemy.attack_damage}",
+                                 int(target.x) + 30,
+                                 int(target.y) - 10,
+                                 config.COLOR_HP_LOW)
                 )
 
             # --- VERIFICAÇÃO DE CONDIÇÃO DE FIM DA BATALHA ---
-            if not self.hero.is_alive() or not self.enemy.is_alive():
+            if (not self.hero.is_alive() and not self.mage.is_alive()) or not self.enemy.is_alive():
                 self.is_battle_over = True
-                
-                if not self.hero.is_alive() and not self.enemy.is_alive():
+
+                if (not self.hero.is_alive() and not self.mage.is_alive()) and not self.enemy.is_alive():
                     self.result_message = "EMPATE!"
                     self.result_color = config.COLOR_TEXT_GOLD
-                elif self.hero.is_alive():
+                elif self.hero.is_alive() or self.mage.is_alive():
                     self.result_message = "VITÓRIA!"
                     self.result_color = config.COLOR_HP_HIGH
                 else:
@@ -150,7 +193,7 @@ class BattleScene(BaseScene):
         header_rect = header_surf.get_rect(center=(config.SCREEN_WIDTH // 2, 45))
         surface.blit(header_surf, header_rect)
 
-        sub_surf = self.game.font_small.render("Combate Resolvido Automaticamente via Cooldown (1.5s)", True, config.COLOR_TEXT_MUTED)
+        sub_surf = self.game.font_small.render("Guerreiros avançam em direção um ao outro antes de atacar", True, config.COLOR_TEXT_MUTED)
         sub_rect = sub_surf.get_rect(center=(config.SCREEN_WIDTH // 2, 80))
         surface.blit(sub_surf, sub_rect)
 
@@ -159,8 +202,9 @@ class BattleScene(BaseScene):
         vs_rect = vs_surf.get_rect(center=(config.SCREEN_WIDTH // 2, 450))
         surface.blit(vs_surf, vs_rect)
 
-        # Desenha Entidades (Herói e Inimigo com Barras de HP)
+        # Desenha Entidades (Herói e Inimigo com Barras de HP — posições dinâmicas)
         self.hero.draw(surface, self.game.font_bold, self.game.font_small)
+        self.mage.draw(surface, self.game.font_bold, self.game.font_small)
         self.enemy.draw(surface, self.game.font_bold, self.game.font_small)
 
         # Desenha Textos Flutuantes de Dano

@@ -23,6 +23,8 @@ COLOR_HERO = (45, 156, 219)        # Azul Ciano Vibrante
 COLOR_HERO_SHADOW = (20, 80, 130)
 COLOR_ENEMY = (235, 87, 87)        # Vermelho Carmesim
 COLOR_ENEMY_SHADOW = (130, 30, 30)
+COLOR_MAGE = (150, 120, 25)         # Amarelo Dourado
+COLOR_MAGE_SHADOW = (150, 120, 0)
 
 # Cores da Interface e Barras de HP
 COLOR_HP_HIGH = (46, 204, 113)     # Verde
@@ -47,3 +49,11 @@ COLOR_BUTTON_BORDER_HOVER = (100, 140, 210)
 # Configurações de Gameplay
 ATTACK_COOLDOWN_DEFAULT = 1.5      # Segundos entre cada ataque
 RESULT_SCREEN_DELAY = 3.0          # Segundos para retornar ao menu após o fim da batalha
+
+# Configurações de Movimentação e Alcance
+# Guerreiro
+WARRIOR_SPEED = 120                # Velocidade do Guerreiro (pixels por segundo)
+WARRIOR_ATTACK_RANGE = 45         # Distância melee para iniciar ataque (pixels)
+# Mago
+MAGE_SPEED = 90
+MAGE_ATTACK_RANGE = 350
