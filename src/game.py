@@ -14,8 +14,11 @@ class Game:
         pygame.font.init()
 
         # Configuração da Janela
-        self.screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
-        pygame.display.set_caption(config.WINDOW_TITLE)
+        self.window = pygame.Window(
+            config.WINDOW_TITLE,
+            size=(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+        )
+        self.screen = self.window.get_surface()
 
         # Relógio para controle de FPS (60 FPS)
         self.clock = pygame.time.Clock()
@@ -37,10 +40,14 @@ class Game:
         self.current_scene = new_scene
 
     def run(self):
-        """Loop Principal da Aplicação (Eventos -> Lógica -> Renderização @ 60 FPS)."""
+        """Loop principal com atualização de lógica em passo fixo de 60 FPS."""
+        fixed_dt = 1.0 / config.FPS
+        lag = 0.0
+
         while self.is_running:
-            # Tempo decorrido em segundos desde o último frame (Delta Time)
-            dt = self.clock.tick(config.FPS) / 1000.0
+            # Mede o tempo real decorrido e limita a renderização a 60 FPS.
+            elapsed = self.clock.tick(config.FPS) / 1000.0
+            lag += elapsed
 
             # 1. Processamento de Eventos
             for event in pygame.event.get():
@@ -49,12 +56,15 @@ class Game:
                 else:
                     self.current_scene.handle_event(event)
 
-            # 2. Atualização Lógica
-            self.current_scene.update(dt)
+            # 2. Atualização Lógica em passos constantes
+            while lag >= fixed_dt:
+                self.current_scene.update(fixed_dt)
+                lag -= fixed_dt
 
             # 3. Renderização
             self.current_scene.draw(self.screen)
-            pygame.display.flip()
+            self.window.flip()
 
+        self.window.destroy()
         pygame.quit()
         sys.exit()

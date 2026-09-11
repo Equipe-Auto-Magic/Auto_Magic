@@ -10,7 +10,7 @@ SCREEN_HEIGHT = 720
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMG_BG_PATH = str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg")
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
-FPS = 120
+FPS = 60
 
 # Paleta de Cores (Estilo Dark / Cyber Fantasy)
 COLOR_BG_DARK = (15, 18, 28)

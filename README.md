@@ -32,7 +32,7 @@
 - **Interface Gráfica (UI)**: Barras de vida dinâmicas acima de cada personagem com coloração adaptativa (verde/amarelo/vermelho) e indicação numérica.
 - **Loop de Combate por Cooldown**: Ataques periódicos e simultâneos a cada 1.5s com exibição de logs de dano no console do terminal.
 - **Condição de Fim de Batalha**: Tela overlay de **VITÓRIA!** ou **DERROTA!** e retorno automático ao Menu Principal após 3 segundos.
-- **FPS**: Renderização cravada a 60 FPS com controle de Delta Time.
+- **Game Loop**: Processamento de input, atualizações lógicas em delta time fixo de `1/60` segundo e renderização a 60 FPS.
 ---
 
 ## 🕹️ 30 Segundos de Gameplay
@@ -79,12 +79,16 @@ Auto-Magic/
 └── src/
     ├── config.py            # Cores, dimensões da tela, FPS e constantes
     ├── entity.py            # Classe Entity (Atributos, HP, Cooldown, Desenho de UI)
-    ├── game.py              # Classe Game (Loop principal, Clock 60 FPS, Gerenciador de Cenas)
+    ├── game.py              # Classe Game (Loop fixo a 60 FPS, pygame.Window, Gerenciador de Cenas)
     └── scenes/
         ├── base_scene.py    # Classe base abstrata para Cenas
         ├── menu_scene.py    # Cena do Menu Principal e componentes de Botão
         └── battle_scene.py  # Arena de Batalha, Combate Automático e Telas Finais
 ```
+
+### Game Loop
+
+O loop principal mantém a renderização limitada a 60 FPS e usa um acumulador de tempo para atualizar a lógica em passos fixos de `1/60` segundo. Em cada ciclo, o jogo processa os eventos de entrada, executa zero ou mais atualizações fixas conforme o tempo acumulado e renderiza a cena atual.
 
 ---
 
