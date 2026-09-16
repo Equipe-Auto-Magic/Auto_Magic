@@ -37,6 +37,8 @@ class Game:
 
     def change_scene(self, new_scene):
         """Altera a cena atual do jogo."""
+        if hasattr(self.current_scene, "cleanup"):
+            self.current_scene.cleanup()
         self.current_scene = new_scene
 
     def run(self):

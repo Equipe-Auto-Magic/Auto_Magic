@@ -2,6 +2,7 @@ import pygame
 from src import config
 from src.entity import Warrior, Mage
 from src.scenes.base_scene import BaseScene
+from src.events import gerenciador_eventos, BuffDeFuria
 
 class FloatingText:
     """Texto flutuante para animação de dano na tela."""
@@ -47,7 +48,8 @@ class BattleScene(BaseScene):
             color=config.COLOR_HERO,
             shadow_color=config.COLOR_HERO_SHADOW,
             attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT,
-            default_direction=1.0
+            default_direction=1.0,
+            team="aliado"
         )
 
         self.mage = Mage(
@@ -59,7 +61,8 @@ class BattleScene(BaseScene):
             color=config.COLOR_MAGE,
             shadow_color=config.COLOR_MAGE_SHADOW,
             attack_cooldown=2.0, # Mago ataca um pouco mais lento
-            default_direction=1.0
+            default_direction=1.0,
+            team="aliado"
         )
 
         self.enemy = Warrior(
@@ -71,13 +74,18 @@ class BattleScene(BaseScene):
             color=config.COLOR_ENEMY,
             shadow_color=config.COLOR_ENEMY_SHADOW,
             attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT,
-            default_direction=-1.0
+            default_direction=-1.0,
+            team="inimigo"
         )
 
         # Atribuição Automática aos Times (cada entidade recebe a referência dinâmica do time adversário)
         self.adicionar_aliado(self.hero)
         self.adicionar_aliado(self.mage)
         self.adicionar_inimigo(self.enemy)
+
+        # Habilidade Passiva (Padrão Observer): BuffDeFuria
+        self.buff_furia = BuffDeFuria(self.time_aliados, self)
+        gerenciador_eventos.inscrever("entidade_morta", self.buff_furia)
 
         # Estado da Batalha
         self.is_battle_over = False
@@ -95,6 +103,11 @@ class BattleScene(BaseScene):
         for e in self.time_inimigos:
             print(f"Inimigo: {e.name:<8} HP: {e.max_hp} | ATK: {e.attack_damage} | VEL: {e.speed}px/s | ALCANCE: {e.attack_range}px")
         print("==========================================\n")
+
+    def cleanup(self):
+        """Limpa inscrições de observadores para evitar retenção de referências."""
+        if hasattr(self, 'buff_furia'):
+            gerenciador_eventos.desinscrever("entidade_morta", self.buff_furia)
 
     def adicionar_aliado(self, entidade):
         """Adiciona uma entidade ao time aliado e vincula a referência do time inimigo."""

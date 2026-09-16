@@ -1,6 +1,7 @@
 import pygame
 import math
 from src import config
+from src.events import gerenciador_eventos
 
 class Entity:
     """
@@ -12,7 +13,7 @@ class Entity:
     Atributos de Movimentação (novos):
         speed        -- velocidade em pixels/segundo (0 = estático)
         attack_range -- distância em pixels para iniciar ataque
-        state        -- 'andando' | 'atacando'
+        state        -- 'andando' | 'atacando' | 'morto'
         target       -- referência à entidade alvo (Entity | None)
 
     Arquitetura Escalável:
@@ -29,13 +30,15 @@ class Entity:
                  speed: float = 0.0,
                  attack_range: float = 0.0,
                  default_direction: float = None,
-                 opponent_team: list = None):
+                 opponent_team: list = None,
+                 team: str = "aliado"):
         self.name = name
         self.max_hp = max_hp
         self.current_hp = max_hp
         self.attack_damage = attack_damage
         self.attack_cooldown = attack_cooldown
         self.cooldown_timer = 0.0
+        self.team = team  # "aliado" ou "inimigo"
 
         # Posição e Dimensões (x/y como float para movimento suave)
         self.x = float(x)
@@ -201,13 +204,17 @@ class Entity:
         self.cooldown_timer %= self.attack_cooldown
 
     def take_damage(self, amount: int):
-        """Aplica dano à entidade. Se HP <= 0, muda o estado para 'morto'."""
+        """Aplica dano à entidade. Se HP <= 0, muda o estado para 'morto' e notifica o evento."""
+        was_alive = self.is_alive()
         self.current_hp = max(0, self.current_hp - amount)
         self.flash_timer = 0.2  # Efeito visual de flash por 200ms
-        if self.current_hp <= 0:
+
+        if self.current_hp <= 0 and was_alive:
             self.state = 'morto'
             self.cooldown_timer = 0.0
             self.target = None
+            # Gatilho de Evento (Emissor): notifica a morte da entidade passando a si mesma
+            gerenciador_eventos.notificar("entidade_morta", self)
 
     def is_alive(self) -> bool:
         """Retorna True se o personagem tiver HP superior a 0 e não estiver morto."""
