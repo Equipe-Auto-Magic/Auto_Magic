@@ -70,12 +70,12 @@ class BuffDeFuria(Observador):
             if e_aliado:
                 print("Aliado caiu! Fúria ativada: Dano aumentado!")
 
-                # Aplica o buff de 50% a todos os aliados vivos restantes
+                # Aplica o buff de 25% a todos os aliados vivos restantes
                 for aliado in self.time_aliados:
                     if aliado != entidade_morta and aliado.is_alive():
                         dano_anterior = aliado.attack_damage
-                        aliado.attack_damage = int(aliado.attack_damage * 1.5)
-                        print(f"[BUFF DE FURIA] {aliado.name}: ATK aumentado de {dano_anterior} para {aliado.attack_damage} (+50%)!")
+                        aliado.attack_damage = int(aliado.attack_damage * 1.25)
+                        print(f"[BUFF DE FURIA] {aliado.name}: ATK aumentado de {dano_anterior} para {aliado.attack_damage} (+25%)!")
 
                         # Se a cena de batalha foi fornecida, gera um texto flutuante comemorativo
                         if self.cena_batalha and hasattr(self.cena_batalha, "floating_texts"):
@@ -83,7 +83,7 @@ class BuffDeFuria(Observador):
                             from src import config
                             self.cena_batalha.floating_texts.append(
                                 FloatingText(
-                                    "FÚRIA! +50% ATK",
+                                    "FÚRIA! +25% ATK",
                                     int(aliado.x) + 10,
                                     int(aliado.y) - 40,
                                     config.COLOR_TEXT_GOLD

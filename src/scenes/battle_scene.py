@@ -32,6 +32,7 @@ class BattleScene(BaseScene):
         hero_x = 180
         mage_x = hero_x - 120 # Mago fica atrás do herói
         enemy_x = config.SCREEN_WIDTH - 80 - 100  # desconta a largura do sprite
+        enemyMage_x = enemy_x + 120 # Bruxo fica atrás do inimigo
         ground_y = 380
 
         # --- Sistema de Grupos / Times (Facções) ---
@@ -78,10 +79,24 @@ class BattleScene(BaseScene):
             team="inimigo"
         )
 
+        self.enemyMage = Mage(
+            name="Bruxo",
+            max_hp=90,
+            attack_damage=10,
+            x=enemyMage_x,
+            y=ground_y,
+            color=config.COLOR_ENEMY,
+            shadow_color=config.COLOR_ENEMY_SHADOW,
+            attack_cooldown=2.0,
+            default_direction=-1.0,
+            team="inimigo"
+        )
+
         # Atribuição Automática aos Times (cada entidade recebe a referência dinâmica do time adversário)
         self.adicionar_aliado(self.hero)
         self.adicionar_aliado(self.mage)
         self.adicionar_inimigo(self.enemy)
+        self.adicionar_inimigo(self.enemyMage)
 
         # Habilidade Passiva (Padrão Observer): BuffDeFuria
         self.buff_furia = BuffDeFuria(self.time_aliados, self)
