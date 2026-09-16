@@ -9,8 +9,15 @@ SCREEN_WIDTH = 1080
 SCREEN_HEIGHT = 720
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMG_BG_PATH = str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg")
+BACKGROUND_IMAGES = [
+    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg"),
+    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-magica.png"),
+    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-noturna.png"),
+    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-outono.png"),
+]
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
 FPS = 60
+STAGE_TRANSITION_DELAY = 2.0        # Segundos de transição entre salas
 
 # Paleta de Cores (Estilo Dark / Cyber Fantasy)
 COLOR_BG_DARK = (15, 18, 28)

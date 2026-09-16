@@ -13,10 +13,11 @@ class BaseScene:
         self.game = game
         self.background = self._load_background()
 
-    def _load_background(self):
+    def _load_background(self, path=None):
         """Carrega e ajusta a imagem de fundo da cena."""
         try:
-            bg_path = Path(config.IMG_BG_PATH)
+            bg_target = path if path is not None else config.IMG_BG_PATH
+            bg_path = Path(bg_target)
             if not bg_path.is_absolute():
                 bg_path = Path(__file__).resolve().parents[1] / bg_path
 
@@ -25,6 +26,12 @@ class BaseScene:
         except Exception as exc:
             print(f"[SCENE] Não foi possível carregar o fundo: {exc}")
             return None
+
+    def set_background(self, path: str):
+        """Permite alterar dinamicamente o fundo da cena."""
+        new_bg = self._load_background(path)
+        if new_bg is not None:
+            self.background = new_bg
 
     def draw_background(self, surface: pygame.Surface):
         """Desenha o fundo da cena ou um fallback de cor."""
