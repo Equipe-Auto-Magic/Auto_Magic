@@ -33,7 +33,11 @@ class BattleScene(BaseScene):
         enemy_x = config.SCREEN_WIDTH - 80 - 100  # desconta a largura do sprite
         ground_y = 380
 
-        # Criação dos Guerreiros (Warrior herda movimentação melee de Entity)
+        # --- Sistema de Grupos / Times (Facções) ---
+        self.time_aliados = []
+        self.time_inimigos = []
+
+        # Criação dos Personagens
         self.hero = Warrior(
             name="Herói",
             max_hp=50,
@@ -42,7 +46,8 @@ class BattleScene(BaseScene):
             y=ground_y,
             color=config.COLOR_HERO,
             shadow_color=config.COLOR_HERO_SHADOW,
-            attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT
+            attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT,
+            default_direction=1.0
         )
 
         self.mage = Mage(
@@ -53,7 +58,8 @@ class BattleScene(BaseScene):
             y=ground_y,
             color=config.COLOR_MAGE,
             shadow_color=config.COLOR_MAGE_SHADOW,
-            attack_cooldown=2.0 # Mago ataca um pouco mais lento
+            attack_cooldown=2.0, # Mago ataca um pouco mais lento
+            default_direction=1.0
         )
 
         self.enemy = Warrior(
@@ -64,13 +70,14 @@ class BattleScene(BaseScene):
             y=ground_y,
             color=config.COLOR_ENEMY,
             shadow_color=config.COLOR_ENEMY_SHADOW,
-            attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT
+            attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT,
+            default_direction=-1.0
         )
 
-        # Define alvos cruzados para o sistema de movimentação
-        self.hero.set_target(self.enemy)
-        self.mage.set_target(self.enemy)
-        self.enemy.set_target(self.hero)
+        # Atribuição Automática aos Times (cada entidade recebe a referência dinâmica do time adversário)
+        self.adicionar_aliado(self.hero)
+        self.adicionar_aliado(self.mage)
+        self.adicionar_inimigo(self.enemy)
 
         # Estado da Batalha
         self.is_battle_over = False
@@ -83,10 +90,27 @@ class BattleScene(BaseScene):
 
         print("\n==========================================")
         print("⚔️  A BATALHA AUTOMÁTICA COMEÇOU!")
-        print(f"Herói  HP: {self.hero.max_hp} | ATK: {self.hero.attack_damage} | VEL: {self.hero.speed}px/s | ALCANCE: {self.hero.attack_range}px")
-        print(f"Mago   HP: {self.mage.max_hp} | ATK: {self.mage.attack_damage} | VEL: {self.mage.speed}px/s | ALCANCE: {self.mage.attack_range}px")
-        print(f"Inimigo HP: {self.enemy.max_hp} | ATK: {self.enemy.attack_damage} | VEL: {self.enemy.speed}px/s | ALCANCE: {self.enemy.attack_range}px")
+        for e in self.time_aliados:
+            print(f"Aliado:  {e.name:<8} HP: {e.max_hp} | ATK: {e.attack_damage} | VEL: {e.speed}px/s | ALCANCE: {e.attack_range}px")
+        for e in self.time_inimigos:
+            print(f"Inimigo: {e.name:<8} HP: {e.max_hp} | ATK: {e.attack_damage} | VEL: {e.speed}px/s | ALCANCE: {e.attack_range}px")
         print("==========================================\n")
+
+    def adicionar_aliado(self, entidade):
+        """Adiciona uma entidade ao time aliado e vincula a referência do time inimigo."""
+        entidade.set_opponent_team(self.time_inimigos)
+        self.time_aliados.append(entidade)
+        return entidade
+
+    def adicionar_inimigo(self, entidade):
+        """Adiciona uma entidade ao time inimigo e vincula a referência do time aliado."""
+        entidade.set_opponent_team(self.time_aliados)
+        self.time_inimigos.append(entidade)
+        return entidade
+
+    def todas_entidades(self):
+        """Retorna lista com todas as entidades de ambos os times."""
+        return self.time_aliados + self.time_inimigos
 
     def handle_event(self, event: pygame.event.Event):
         # Permite retornar antecipadamente pressionando ESC
@@ -95,19 +119,28 @@ class BattleScene(BaseScene):
             self.game.change_scene(MenuScene(self.game))
 
     def update(self, dt: float):
-        # Se a batalha acabou, apenas conta o tempo para retornar ao Menu
+        # Se a batalha acabou, conta o tempo para retornar ao Menu e mantém animações
         if self.is_battle_over:
             self.return_timer -= dt
             if self.return_timer <= 0:
                 print("[BATALHA] Retornando ao Menu Principal...\n")
                 from src.scenes.menu_scene import MenuScene
                 self.game.change_scene(MenuScene(self.game))
+                return
+
+            # Mantém atualização dos personagens (caminhada pós-vitória) e textos
+            for entidade in self.todas_entidades():
+                entidade.update(dt)
+
+            for ft in self.floating_texts[:]:
+                ft.update(dt)
+                if ft.is_dead():
+                    self.floating_texts.remove(ft)
             return
 
-        # Atualiza o estado das entidades (movimentação + cooldown de ataque)
-        self.hero.update(dt)
-        self.mage.update(dt)
-        self.enemy.update(dt)
+        # Atualiza autonomamente o estado de todas as entidades de ambos os times
+        for entidade in self.todas_entidades():
+            entidade.update(dt)
 
         # Atualiza textos flutuantes
         for ft in self.floating_texts[:]:
@@ -115,66 +148,42 @@ class BattleScene(BaseScene):
             if ft.is_dead():
                 self.floating_texts.remove(ft)
 
-        # --- LOOP DE COMBATE (só executa quando ambos estão em alcance) ---
-        hero_ready = self.hero.can_attack()
-        mage_ready = self.mage.can_attack()
-        enemy_ready = self.enemy.can_attack()
+        # --- LOOP DE COMBATE AUTÔNOMO ENTRE TIMES ---
+        for attacker in self.todas_entidades():
+            if attacker.can_attack() and attacker.target is not None and attacker.target.is_alive():
+                target = attacker.target
+                target.take_damage(attacker.attack_damage)
+                attacker.reset_cooldown()
 
-        if hero_ready or mage_ready or enemy_ready:
-            # Herói causa dano ao Inimigo
-            if hero_ready:
-                self.enemy.take_damage(self.hero.attack_damage)
-                self.hero.reset_cooldown()
-                print(f"⚔️  [COMBATE] Herói causou {self.hero.attack_damage} de dano! "
-                      f"(HP Inimigo: {self.enemy.current_hp}/{self.enemy.max_hp})")
+                is_mage = isinstance(attacker, Mage)
+                icon = "✨" if is_mage else "⚔️"
+                color = config.COLOR_MAGE if is_mage else config.COLOR_HP_LOW
 
-                # Texto flutuante posicionado dinamicamente sobre o inimigo
-                self.floating_texts.append(
-                    FloatingText(f"-{self.hero.attack_damage}",
-                                 int(self.enemy.x) + 30,
-                                 int(self.enemy.y) - 10,
-                                 config.COLOR_HP_LOW)
-                )
-
-            # Mago causa dano ao Inimigo
-            if mage_ready:
-                self.enemy.take_damage(self.mage.attack_damage)
-                self.mage.reset_cooldown()
-                print(f"✨  [COMBATE] Mago causou {self.mage.attack_damage} de dano! "
-                      f"(HP Inimigo: {self.enemy.current_hp}/{self.enemy.max_hp})")
-
-                # Texto flutuante
-                self.floating_texts.append(
-                    FloatingText(f"-{self.mage.attack_damage}",
-                                 int(self.enemy.x) + 50,
-                                 int(self.enemy.y) - 30,
-                                 config.COLOR_MAGE) # Cor do dano do mago
-                )
-
-            # Inimigo causa dano ao Herói (ou ao Mago se o herói morrer)
-            if enemy_ready:
-                target = self.hero if self.hero.is_alive() else self.mage
-                target.take_damage(self.enemy.attack_damage)
-                self.enemy.reset_cooldown()
-                print(f"⚔️  [COMBATE] Inimigo causou {self.enemy.attack_damage} de dano! "
+                print(f"{icon}  [COMBATE] {attacker.name} causou {attacker.attack_damage} de dano! "
                       f"(HP {target.name}: {target.current_hp}/{target.max_hp})")
 
                 # Texto flutuante posicionado dinamicamente sobre o alvo
+                offset_x = 50 if is_mage else 30
+                offset_y = -30 if is_mage else -10
                 self.floating_texts.append(
-                    FloatingText(f"-{self.enemy.attack_damage}",
-                                 int(target.x) + 30,
-                                 int(target.y) - 10,
-                                 config.COLOR_HP_LOW)
+                    FloatingText(f"-{attacker.attack_damage}",
+                                 int(target.x) + offset_x,
+                                 int(target.y) + offset_y,
+                                 color)
                 )
 
-            # --- VERIFICAÇÃO DE CONDIÇÃO DE FIM DA BATALHA ---
-            if (not self.hero.is_alive() and not self.mage.is_alive()) or not self.enemy.is_alive():
+        # --- VERIFICAÇÃO DE CONDIÇÃO DE FIM DA BATALHA POR TIMES ---
+        if not self.is_battle_over:
+            aliados_vivos = any(e.is_alive() for e in self.time_aliados)
+            inimigos_vivos = any(e.is_alive() for e in self.time_inimigos)
+
+            if not aliados_vivos or not inimigos_vivos:
                 self.is_battle_over = True
 
-                if (not self.hero.is_alive() and not self.mage.is_alive()) and not self.enemy.is_alive():
+                if not aliados_vivos and not inimigos_vivos:
                     self.result_message = "EMPATE!"
                     self.result_color = config.COLOR_TEXT_GOLD
-                elif self.hero.is_alive() or self.mage.is_alive():
+                elif aliados_vivos:
                     self.result_message = "VITÓRIA!"
                     self.result_color = config.COLOR_HP_HIGH
                 else:
@@ -202,10 +211,9 @@ class BattleScene(BaseScene):
         vs_rect = vs_surf.get_rect(center=(config.SCREEN_WIDTH // 2, 450))
         surface.blit(vs_surf, vs_rect)
 
-        # Desenha Entidades (Herói e Inimigo com Barras de HP — posições dinâmicas)
-        self.hero.draw(surface, self.game.font_bold, self.game.font_small)
-        self.mage.draw(surface, self.game.font_bold, self.game.font_small)
-        self.enemy.draw(surface, self.game.font_bold, self.game.font_small)
+        # Desenha autonomamente todas as Entidades
+        for entidade in self.todas_entidades():
+            entidade.draw(surface, self.game.font_bold, self.game.font_small)
 
         # Desenha Textos Flutuantes de Dano
         for ft in self.floating_texts:
