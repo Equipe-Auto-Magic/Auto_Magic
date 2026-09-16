@@ -18,6 +18,7 @@ BACKGROUND_IMAGES = [
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
 FPS = 60
 STAGE_TRANSITION_DELAY = 2.0        # Segundos de transição entre salas
+GROUND_Y = 500                      # Posição vertical do chão dos personagens (ajustado +20px)
 
 # Paleta de Cores (Estilo Dark / Cyber Fantasy)
 COLOR_BG_DARK = (15, 18, 28)

@@ -118,7 +118,7 @@ class StageManager(Observador):
 
         # 1. Reposiciona e reseta temporários dos aliados (mantendo objetos e HP)
         base_hero_x = 180
-        base_ground_y = 380
+        base_ground_y = config.GROUND_Y
 
         for i, aliado in enumerate(self.time_aliados):
             # Posicionamento à esquerda com pequenos deslocamentos

@@ -31,7 +31,7 @@ class BattleScene(BaseScene):
     def __init__(self, game):
         super().__init__(game)
 
-        ground_y = 380
+        ground_y = config.GROUND_Y
         hero_x = 180
         mage_x = hero_x - 120  # Mago fica atrás do herói
 

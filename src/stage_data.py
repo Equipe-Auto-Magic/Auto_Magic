@@ -43,7 +43,7 @@ class EnemyFactory:
     """Fábrica para instanciar inimigos apenas quando a sala for iniciada."""
 
     @staticmethod
-    def create_enemy(cfg: EnemyConfig, base_x: int = 0, base_y: int = 380) -> Warrior | Mage:
+    def create_enemy(cfg: EnemyConfig, base_x: int = 0, base_y: int = config.GROUND_Y) -> Warrior | Mage:
         """Cria e posiciona a entidade no lado direito da tela."""
         pos_x = base_x + cfg.offset_x
         pos_y = base_y + cfg.offset_y
