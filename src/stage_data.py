@@ -5,7 +5,17 @@ Permite definir estruturas completas de estágios e salas sem instanciar inimigo
 from dataclasses import dataclass, field
 from typing import List, Optional
 from src import config
-from src.entity import Warrior, Mage
+from src.entity import (
+    Entity,
+    TransformComponent,
+    HealthComponent,
+    MovementComponent,
+    CombatComponent,
+    TargetingComponent,
+    SpriteComponent,
+    Warrior,
+    Mage
+)
 
 
 @dataclass
@@ -40,44 +50,37 @@ class StageConfig:
 
 
 class EnemyFactory:
-    """Fábrica para instanciar inimigos apenas quando a sala for iniciada."""
+    """Fábrica para instanciar inimigos apenas quando a sala for iniciada usando o Padrão de Componentes."""
 
     @staticmethod
-    def create_enemy(cfg: EnemyConfig, base_x: int = 0, base_y: int = config.GROUND_Y) -> Warrior | Mage:
-        """Cria e posiciona a entidade no lado direito da tela."""
+    def create_enemy(cfg: EnemyConfig, base_x: int = 0, base_y: int = config.GROUND_Y) -> Entity:
+        """Cria uma Entity vazia e acopla seus componentes de dados, lógica e renderização."""
         pos_x = base_x + cfg.offset_x
         pos_y = base_y + cfg.offset_y
 
-        kwargs = {
-            "name": cfg.name,
-            "max_hp": cfg.max_hp,
-            "attack_damage": cfg.attack_damage,
-            "x": pos_x,
-            "y": pos_y,
-            "color": config.COLOR_ENEMY,
-            "shadow_color": config.COLOR_ENEMY_SHADOW,
-            "attack_cooldown": cfg.attack_cooldown,
-            "default_direction": -1.0,
-            "team": "inimigo",
-        }
+        is_mage = cfg.unit_class.lower() == "mage"
 
+        # Resolução de velocidade e alcance
         if cfg.speed is not None:
-            kwargs["speed"] = cfg.speed
-        if cfg.attack_range is not None:
-            kwargs["attack_range"] = cfg.attack_range
-
-        if cfg.unit_class.lower() == "mage":
-            if "speed" not in kwargs:
-                kwargs["speed"] = config.MAGE_SPEED
-            if "attack_range" not in kwargs:
-                kwargs["attack_range"] = config.MAGE_ATTACK_RANGE
-            return Mage(**kwargs)
+            speed = cfg.speed
         else:
-            if "speed" not in kwargs:
-                kwargs["speed"] = config.WARRIOR_SPEED
-            if "attack_range" not in kwargs:
-                kwargs["attack_range"] = config.WARRIOR_ATTACK_RANGE
-            return Warrior(**kwargs)
+            speed = config.MAGE_SPEED if is_mage else config.WARRIOR_SPEED
+
+        if cfg.attack_range is not None:
+            attack_range = cfg.attack_range
+        else:
+            attack_range = config.MAGE_ATTACK_RANGE if is_mage else config.WARRIOR_ATTACK_RANGE
+
+        # Instanciação modular por componentes
+        inimigo = Entity(name=cfg.name, team="inimigo")
+        inimigo.add_component(TransformComponent(x=pos_x, y=pos_y, width=100, height=140))
+        inimigo.add_component(HealthComponent(max_hp=cfg.max_hp))
+        inimigo.add_component(MovementComponent(speed=speed, default_direction=-1.0))
+        inimigo.add_component(CombatComponent(dano=cfg.attack_damage, alcance=attack_range, cooldown=cfg.attack_cooldown))
+        inimigo.add_component(TargetingComponent())
+        inimigo.add_component(SpriteComponent(width=100, height=140, color=config.COLOR_ENEMY, shadow_color=config.COLOR_ENEMY_SHADOW))
+
+        return inimigo
 
 
 def get_default_stages() -> List[StageConfig]:

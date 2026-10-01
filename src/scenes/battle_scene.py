@@ -1,6 +1,17 @@
 import pygame
 from src import config
-from src.entity import Warrior, Mage
+from src.entity import (
+    Entity,
+    TransformComponent,
+    HealthComponent,
+    MovementComponent,
+    CombatComponent,
+    TargetingComponent,
+    SpriteComponent,
+    RenderComponent,
+    Warrior,
+    Mage
+)
 from src.scenes.base_scene import BaseScene
 from src.events import gerenciador_eventos, BuffDeFuria
 from src.stage_manager import StageManager, StageState
@@ -39,32 +50,22 @@ class BattleScene(BaseScene):
         self.time_aliados = []
         self.time_inimigos = []
 
-        # 1. Aliados são criados uma ÚNICA vez no início da batalha
-        self.hero = Warrior(
-            name="Herói",
-            max_hp=50,
-            attack_damage=18,
-            x=hero_x,
-            y=ground_y,
-            color=config.COLOR_HERO,
-            shadow_color=config.COLOR_HERO_SHADOW,
-            attack_cooldown=config.ATTACK_COOLDOWN_DEFAULT,
-            default_direction=1.0,
-            team="aliado"
-        )
+        # 1. Aliados são criados uma ÚNICA vez no início da batalha usando o Padrão de Componentes
+        self.hero = Entity(name="Herói", team="aliado")
+        self.hero.add_component(TransformComponent(x=hero_x, y=ground_y, width=100, height=140))
+        self.hero.add_component(HealthComponent(max_hp=50))
+        self.hero.add_component(MovementComponent(speed=config.WARRIOR_SPEED, default_direction=1.0))
+        self.hero.add_component(CombatComponent(dano=18, alcance=config.WARRIOR_ATTACK_RANGE, cooldown=config.ATTACK_COOLDOWN_DEFAULT))
+        self.hero.add_component(TargetingComponent())
+        self.hero.add_component(SpriteComponent(width=100, height=140, color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW))
 
-        self.mage = Mage(
-            name="Mago",
-            max_hp=30,
-            attack_damage=12,
-            x=mage_x,
-            y=ground_y,
-            color=config.COLOR_MAGE,
-            shadow_color=config.COLOR_MAGE_SHADOW,
-            attack_cooldown=2.0,  # Mago ataca um pouco mais lento
-            default_direction=1.0,
-            team="aliado"
-        )
+        self.mage = Entity(name="Mago", team="aliado")
+        self.mage.add_component(TransformComponent(x=mage_x, y=ground_y, width=100, height=140))
+        self.mage.add_component(HealthComponent(max_hp=30))
+        self.mage.add_component(MovementComponent(speed=config.MAGE_SPEED, default_direction=1.0))
+        self.mage.add_component(CombatComponent(dano=12, alcance=config.MAGE_ATTACK_RANGE, cooldown=2.0))
+        self.mage.add_component(TargetingComponent())
+        self.mage.add_component(SpriteComponent(width=100, height=140, color=config.COLOR_MAGE, shadow_color=config.COLOR_MAGE_SHADOW))
 
         self.time_aliados.append(self.hero)
         self.time_aliados.append(self.mage)
@@ -129,16 +130,17 @@ class BattleScene(BaseScene):
                 target.take_damage(attacker.attack_damage)
                 attacker.reset_cooldown()
 
-                is_mage = isinstance(attacker, Mage)
-                icon = "✨" if is_mage else "⚔️"
-                color = config.COLOR_MAGE if is_mage else config.COLOR_HP_LOW
+                combat = attacker.get_component(CombatComponent)
+                is_ranged = combat.attack_range > 100 if combat else ("Mago" in attacker.name or "Feiticeiro" in attacker.name or "Invocador" in attacker.name)
+                icon = "✨" if is_ranged else "⚔️"
+                color = config.COLOR_MAGE if is_ranged else config.COLOR_HP_LOW
 
                 print(f"{icon}  [COMBATE] {attacker.name} causou {attacker.attack_damage} de dano! "
                       f"(HP {target.name}: {target.current_hp}/{target.max_hp})")
 
                 # Texto flutuante posicionado dinamicamente sobre o alvo
-                offset_x = 50 if is_mage else 30
-                offset_y = -30 if is_mage else -10
+                offset_x = 50 if is_ranged else 30
+                offset_y = -30 if is_ranged else -10
                 self.floating_texts.append(
                     FloatingText(f"-{attacker.attack_damage}",
                                  int(target.x) + offset_x,
