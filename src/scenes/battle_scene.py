@@ -53,7 +53,7 @@ class BattleScene(BaseScene):
         # 1. Aliados são criados uma ÚNICA vez no início da batalha usando o Padrão de Componentes
         self.hero = Entity(name="Herói", team="aliado")
         self.hero.add_component(TransformComponent(x=hero_x, y=ground_y, width=100, height=140))
-        self.hero.add_component(HealthComponent(max_hp=50))
+        self.hero.add_component(HealthComponent(max_hp=1110))
         self.hero.add_component(MovementComponent(speed=config.WARRIOR_SPEED, default_direction=1.0))
         self.hero.add_component(CombatComponent(dano=18, alcance=config.WARRIOR_ATTACK_RANGE, cooldown=config.ATTACK_COOLDOWN_DEFAULT))
         self.hero.add_component(TargetingComponent())
@@ -129,14 +129,18 @@ class BattleScene(BaseScene):
                 target = attacker.target
                 target.take_damage(attacker.attack_damage)
                 attacker.reset_cooldown()
+                attacker.trigger_attack_feedback()
 
                 combat = attacker.get_component(CombatComponent)
                 is_ranged = combat.attack_range > 100 if combat else ("Mago" in attacker.name or "Feiticeiro" in attacker.name or "Invocador" in attacker.name)
-                icon = "✨" if is_ranged else "⚔️"
+                icon = "[MAGIA]" if is_ranged else "[GOLPE]"
                 color = config.COLOR_MAGE if is_ranged else config.COLOR_HP_LOW
 
-                print(f"{icon}  [COMBATE] {attacker.name} causou {attacker.attack_damage} de dano! "
-                      f"(HP {target.name}: {target.current_hp}/{target.max_hp})")
+                try:
+                    print(f"{icon} [COMBATE] {attacker.name} causou {attacker.attack_damage} de dano! "
+                          f"(HP {target.name}: {target.current_hp}/{target.max_hp})")
+                except UnicodeEncodeError:
+                    pass
 
                 # Texto flutuante posicionado dinamicamente sobre o alvo
                 offset_x = 50 if is_ranged else 30

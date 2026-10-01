@@ -135,7 +135,8 @@ class StageManager(Observador):
             aliado.cooldown_timer = 0.0
             aliado.flash_timer = 0.0
             if aliado.is_alive():
-                aliado.state = 'andando' if aliado.speed > 0 else 'atacando'
+                from src.entity import EntityState
+                aliado.state = EntityState.ANDANDO if aliado.speed > 0 else EntityState.PREPARANDO
 
         # 2. Limpa o time inimigo anterior
         self.time_inimigos.clear()

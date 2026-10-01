@@ -1,5 +1,6 @@
 """
 Módulo de Entidades e Componentes do Auto-Battler.
+Implementa o Padrão de Componentes com Máquina de Estados e Feedback Visual por Cores.
 A classe Entity atua puramente como contêiner modular de componentes.
 """
 from typing import Dict, Type, TypeVar, Optional, Any, List
@@ -8,6 +9,17 @@ from src import config
 from src.events import gerenciador_eventos
 
 T = TypeVar('T', bound='Component')
+
+
+class EntityState:
+    """
+    Constantes dos Estados da Entidade (Máquina de Estados).
+    Facilita a transição para animações com spritesheets no futuro.
+    """
+    ANDANDO = "ANDANDO"         # Movendo-se até alcançar o range
+    PREPARANDO = "PREPARANDO"   # No alcance, aguardando o timer/cooldown do ataque recarregar
+    ATACANDO = "ATACANDO"       # Instante do disparo do dano / golpe
+    MORTO = "MORTO"             # HP <= 0, fora de combate
 
 
 class Component:
@@ -159,19 +171,32 @@ class Entity:
 
     @property
     def state(self) -> str:
+        """Consulta o estado unificado da máquina de estados."""
         health = self.get_component(HealthComponent)
         if health and not health.is_alive():
-            return "morto"
+            return EntityState.MORTO
+
         targeting = self.get_component(TargetingComponent)
         if targeting:
             return targeting.state
-        return "andando"
+        return EntityState.ANDANDO
 
     @state.setter
     def state(self, val: str):
         targeting = self.get_component(TargetingComponent)
         if targeting:
-            targeting.state = val
+            # Aceita formatos maiúsculos ou minúsculos mantendo normalização
+            norm = val.upper()
+            if norm in (EntityState.ANDANDO, "ANDANDO"):
+                targeting.state = EntityState.ANDANDO
+            elif norm in (EntityState.PREPARANDO, "PREPARANDO"):
+                targeting.state = EntityState.PREPARANDO
+            elif norm in (EntityState.ATACANDO, "ATACANDO"):
+                targeting.state = EntityState.ATACANDO
+            elif norm in (EntityState.MORTO, "MORTO"):
+                targeting.state = EntityState.MORTO
+            else:
+                targeting.state = val
 
     @property
     def target(self) -> Optional['Entity']:
@@ -201,18 +226,28 @@ class Entity:
         return health.is_alive() if health else False
 
     def take_damage(self, amount: int) -> None:
-        """Encaminha o recebimento de dano para o HealthComponent."""
+        """Encaminha o recebimento de dano para o HealthComponent e feedback de flash."""
         health = self.get_component(HealthComponent)
         if health:
             health.take_damage(amount)
         sprite = self.get_component(SpriteComponent)
         if sprite:
-            sprite.trigger_flash()
+            sprite.trigger_damage_flash()
 
     def can_attack(self) -> bool:
         """Verifica disponibilidade de ataque via CombatComponent."""
         combat = self.get_component(CombatComponent)
         return combat.can_attack() if combat else False
+
+    def trigger_attack_feedback(self) -> None:
+        """Ativa feedback visual do instante exato do ataque."""
+        targeting = self.get_component(TargetingComponent)
+        if targeting:
+            targeting.state = EntityState.ATACANDO
+
+        sprite = self.get_component(SpriteComponent)
+        if sprite:
+            sprite.trigger_attack_feedback(duration=0.1)
 
     def reset_cooldown(self) -> None:
         """Reinicia o temporizador de ataque."""
@@ -286,7 +321,7 @@ class HealthComponent(Component):
         self.state: str = "vivo"
 
     def is_alive(self) -> bool:
-        return self.current_hp > 0 and self.state != "morto"
+        return self.current_hp > 0 and self.state != EntityState.MORTO
 
     def take_damage(self, amount: int) -> None:
         if not self.is_alive():
@@ -294,7 +329,7 @@ class HealthComponent(Component):
 
         self.current_hp = max(0, self.current_hp - amount)
         if self.current_hp <= 0:
-            self.state = "morto"
+            self.state = EntityState.MORTO
             if self.entity is not None:
                 # Gatilho de Evento (Emissor): notifica a morte da entidade dona
                 gerenciador_eventos.notificar("entidade_morta", self.entity)
@@ -346,7 +381,7 @@ class MovementComponent(Component):
 class CombatComponent(Component):
     """
     Guarda dano, alcance e cooldown.
-    Contém a lógica do temporizador e a execução de causar dano a um alvo.
+    Contém a lógica do temporizador e a verificação de prontidão para ataque.
     """
     def __init__(self, dano: int, alcance: float, cooldown: float = config.ATTACK_COOLDOWN_DEFAULT):
         super().__init__()
@@ -361,11 +396,11 @@ class CombatComponent(Component):
             self.cooldown_timer = 0.0
             return
 
-        # Acumula cooldown apenas se a entidade estiver em estado de ataque
+        # Acumula cooldown apenas se a entidade estiver parada no range (PREPARANDO ou ATACANDO)
         targeting = self.entity.get_component(TargetingComponent) if self.entity else None
-        if targeting and targeting.state == "atacando":
+        if targeting and targeting.state in (EntityState.PREPARANDO, EntityState.ATACANDO):
             self.cooldown_timer += dt
-        elif targeting and targeting.state == "andando":
+        elif targeting and targeting.state == EntityState.ANDANDO:
             self.cooldown_timer = 0.0
 
     def can_attack(self) -> bool:
@@ -374,21 +409,14 @@ class CombatComponent(Component):
             return False
 
         targeting = self.entity.get_component(TargetingComponent) if self.entity else None
-        if not targeting or targeting.state != "atacando" or targeting.target is None:
+        if not targeting or targeting.target is None or not targeting.target.is_alive():
             return False
 
-        if not targeting.target.is_alive():
+        # Pode atacar caso esteja no alcance
+        if targeting.state not in (EntityState.PREPARANDO, EntityState.ATACANDO):
             return False
 
         return self.cooldown_timer >= self.cooldown
-
-    def attack(self, target: Entity) -> int:
-        """Causa dano direto ao alvo e reinicia o temporizador."""
-        if self.can_attack() and target is not None:
-            target.take_damage(self.damage)
-            self.reset_cooldown()
-            return self.damage
-        return 0
 
     def reset_cooldown(self) -> None:
         if self.cooldown > 0:
@@ -399,17 +427,17 @@ class CombatComponent(Component):
 
 class TargetingComponent(Component):
     """
-    Cérebro da IA autônoma.
-    No update(dt), busca o inimigo vivo mais próximo nas listas de time oponente.
-    Calcula a distância:
-    - Se for maior que o alcance: ordena o MovementComponent a andar e reseta cooldown.
-    - Se for menor ou igual: ordena o CombatComponent a atacar.
+    Cérebro da IA autônoma e Máquina de Estados de Comportamento:
+    - 'ANDANDO': Movendo-se até alcançar o range.
+    - 'PREPARANDO': No alcance, aguardando o cooldown carregar.
+    - 'ATACANDO': Instante em que desfere o ataque.
+    - 'MORTO': HP <= 0.
     """
     def __init__(self, opponent_team: Optional[List[Entity]] = None):
         super().__init__()
         self.opponent_team: List[Entity] = opponent_team if opponent_team is not None else []
         self.target: Optional[Entity] = None
-        self.state: str = "andando"  # 'andando' | 'atacando' | 'morto'
+        self.state: str = EntityState.ANDANDO
 
     def set_opponent_team(self, team: List[Entity]) -> None:
         self.opponent_team = team
@@ -457,7 +485,7 @@ class TargetingComponent(Component):
 
         health = self.entity.get_component(HealthComponent)
         if health and not health.is_alive():
-            self.state = "morto"
+            self.state = EntityState.MORTO
             self.target = None
             movement = self.entity.get_component(MovementComponent)
             if movement:
@@ -475,8 +503,8 @@ class TargetingComponent(Component):
             attack_range = combat.attack_range if combat else 0.0
 
             if dist > attack_range:
-                # Distância maior: caminha em direção ao alvo
-                self.state = "andando"
+                # Distância MAIOR que alcance: Estado 'ANDANDO'
+                self.state = EntityState.ANDANDO
                 if movement and movement.speed > 0 and self_trans:
                     target_center = self.target.rect.centerx
                     direction = 1.0 if target_center > self_trans.center_x else -1.0
@@ -485,13 +513,16 @@ class TargetingComponent(Component):
                     if movement:
                         movement.current_direction = 0.0
             else:
-                # Distância menor ou igual: engaja combate
-                self.state = "atacando"
+                # Distância MENOR OU IGUAL: Para de andar
                 if movement:
                     movement.current_direction = 0.0
+
+                # Se não estiver no instante de 'ATACANDO', fica em 'PREPARANDO' (recarregando cooldown)
+                if self.state != EntityState.ATACANDO:
+                    self.state = EntityState.PREPARANDO
         else:
             # Sem alvos vivos na sala: caminha na direção padrão
-            self.state = "andando"
+            self.state = EntityState.ANDANDO
             if movement and movement.speed > 0:
                 movement.current_direction = movement.default_direction
             elif movement:
@@ -501,27 +532,98 @@ class TargetingComponent(Component):
 class SpriteComponent(Component):
     """
     Componente visual e de renderização (Render/SpriteComponent).
-    Lê as informações de TransformComponent para desenhar na tela,
-    verifica o HealthComponent para aplicar os 50% de opacidade (Alpha = 128) caso esteja morto,
-    e desenha nome, barras de vida e cooldown de ataque.
+    Implementa Feedback Visual por Cores de acordo com a Máquina de Estados:
+    - ANDANDO: Azul (Aliados) / Laranja (Inimigos)
+    - PREPARANDO: Amarelo (carregando próximo golpe no range)
+    - ATACANDO: Vermelho / Flash Branco por 0.1s (instante exato do dano)
+    - MORTO: Cinza com 50% de opacidade (Alpha 128)
+
+    Arquitetura Pronta para Animações:
+    O método update_visual_state() isola a escolha do estado visual.
+    No futuro, basta substituir a atribuição de cor por chamadas como
+    set_animation('walk'), set_animation('idle') ou set_animation('attack').
     """
     def __init__(self, width: int = 100, height: int = 140,
                  color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW):
         super().__init__()
         self.width: int = width
         self.height: int = height
-        self.color = color
+        self.base_color = color
+        self.current_render_color = color
         self.shadow_color = shadow_color
-        self.flash_timer: float = 0.0
+
+        # Temporizadores para feedback visual instantâneo
+        self.flash_timer: float = 0.0            # Flash de dano recebido
+        self.attack_feedback_timer: float = 0.0  # Duração do instante de ataque (0.1s)
+        self.current_alpha: int = 255
         self.shake_offset_x: int = 0
         self.shake_offset_y: int = 0
 
-    def trigger_flash(self, duration: float = 0.2) -> None:
+    def trigger_damage_flash(self, duration: float = 0.2) -> None:
+        """Flash branco ao receber dano."""
         self.flash_timer = duration
 
+    def trigger_attack_feedback(self, duration: float = 0.1) -> None:
+        """Ativa o feedback visual do momento do ataque."""
+        self.attack_feedback_timer = duration
+
+    def update_visual_state(self) -> None:
+        """
+        Isole a seleção de cor / apresentação visual baseada no estado atual.
+        Estrutura modular: no futuro, substitua 'current_render_color' por 'set_animation(...)'.
+        """
+        if not self.entity:
+            return
+
+        current_state = self.entity.state
+        team = getattr(self.entity, "team", "aliado")
+
+        if current_state == EntityState.MORTO:
+            # MORTO: Cinza com 50% de opacidade (Alpha = 128)
+            self.current_render_color = config.COLOR_STATE_DEAD
+            self.current_alpha = 128
+            # FUTURO: self.set_animation("die") ou self.set_animation("dead")
+
+        elif self.attack_feedback_timer > 0 or current_state == EntityState.ATACANDO:
+            # ATACANDO: Vermelho ou Flash Branco por 0.1s
+            self.current_render_color = config.COLOR_STATE_ATTACK_FLASH if self.attack_feedback_timer > 0.05 else config.COLOR_STATE_ATTACKING
+            self.current_alpha = 255
+            # FUTURO: self.set_animation("attack")
+
+        elif current_state == EntityState.PREPARANDO:
+            # PREPARANDO: Amarelo (aguardando/carregando cooldown no range)
+            self.current_render_color = config.COLOR_STATE_PREPARING
+            self.current_alpha = 255
+            # FUTURO: self.set_animation("idle") ou self.set_animation("ready")
+
+        elif current_state == EntityState.ANDANDO:
+            # ANDANDO: Azul (Aliados) / Laranja (Inimigos)
+            if team == "aliado":
+                self.current_render_color = config.COLOR_STATE_WALK_ALLY
+            else:
+                self.current_render_color = config.COLOR_STATE_WALK_ENEMY
+            self.current_alpha = 255
+            # FUTURO: self.set_animation("walk")
+
+        else:
+            self.current_render_color = self.base_color
+            self.current_alpha = 255
+
     def update(self, dt: float) -> None:
+        # Atualiza temporizador de flash de dano
         if self.flash_timer > 0:
             self.flash_timer -= dt
+
+        # Atualiza temporizador de feedback do ataque
+        if self.attack_feedback_timer > 0:
+            self.attack_feedback_timer -= dt
+            if self.attack_feedback_timer <= 0:
+                targeting = self.entity.get_component(TargetingComponent) if self.entity else None
+                if targeting and targeting.state == EntityState.ATACANDO:
+                    targeting.state = EntityState.PREPARANDO
+
+        # Atualiza a cor/apresentação visual de acordo com a máquina de estados
+        self.update_visual_state()
 
     def draw(self, surface: pygame.Surface, font_bold: pygame.font.Font, font_small: pygame.font.Font) -> None:
         if not self.entity:
@@ -530,7 +632,6 @@ class SpriteComponent(Component):
         transform = self.entity.get_component(TransformComponent)
         health = self.entity.get_component(HealthComponent)
         combat = self.entity.get_component(CombatComponent)
-        targeting = self.entity.get_component(TargetingComponent)
 
         draw_x = int(transform.x if transform else 0) + self.shake_offset_x
         draw_y = int(transform.y if transform else 0) + self.shake_offset_y
@@ -544,25 +645,41 @@ class SpriteComponent(Component):
 
         # Sombra sob o personagem
         shadow_rect = pygame.Rect(5, 10, self.width, self.height)
-        pygame.draw.rect(sprite_surf, self.shadow_color, shadow_rect, border_radius=12)
+        shadow_col = (80, 80, 80) if is_dead else self.shadow_color
+        pygame.draw.rect(sprite_surf, shadow_col, shadow_rect, border_radius=12)
 
-        # Corpo estilizado
-        main_color = (255, 255, 255) if (self.flash_timer > 0 and not is_dead) else self.color
+        # Cor do corpo baseada no estado visual atual (ou flash de dano)
+        if self.flash_timer > 0 and not is_dead:
+            main_color = (255, 255, 255)
+        else:
+            main_color = self.current_render_color
+
         char_rect = pygame.Rect(0, 0, self.width, self.height)
         pygame.draw.rect(sprite_surf, main_color, char_rect, border_radius=12)
         pygame.draw.rect(sprite_surf, config.COLOR_PANEL_BORDER, char_rect, width=2, border_radius=12)
 
-        # 50% de opacidade caso esteja morto
-        if is_dead:
-            sprite_surf.set_alpha(128)
+        # Aplica opacidade (Alpha 128 quando morto)
+        sprite_surf.set_alpha(self.current_alpha)
 
         surface.blit(sprite_surf, (draw_x, draw_y))
 
         # Elementos de UI sobre a entidade
         if not is_dead:
-            current_state = targeting.state if targeting else "andando"
-            state_icon = "→" if current_state == "andando" else "⚔"
-            state_surf = font_small.render(state_icon, True, config.COLOR_TEXT_GOLD)
+            current_state = self.entity.state
+            if current_state == EntityState.ANDANDO:
+                state_icon = "→ ANDANDO"
+                state_color = config.COLOR_TEXT_PRIMARY
+            elif current_state == EntityState.PREPARANDO:
+                state_icon = "⏳ PREPARANDO"
+                state_color = config.COLOR_STATE_PREPARING
+            elif current_state == EntityState.ATACANDO:
+                state_icon = "⚔ ATACANDO"
+                state_color = config.COLOR_STATE_ATTACKING
+            else:
+                state_icon = current_state
+                state_color = config.COLOR_TEXT_GOLD
+
+            state_surf = font_small.render(state_icon, True, state_color)
             state_rect = state_surf.get_rect(center=(draw_x + self.width // 2, draw_y - self.height + 70))
             surface.blit(state_surf, state_rect)
 
@@ -608,14 +725,16 @@ class SpriteComponent(Component):
                 cd_fill_width = int(cd_bar_width * cd_pct)
                 if cd_fill_width > 0:
                     cd_fill_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_fill_width, cd_bar_height)
-                    pygame.draw.rect(surface, config.COLOR_TEXT_GOLD, cd_fill_rect, border_radius=3)
+                    # Barra amarela durante preparação, vermelha no ataque
+                    bar_col = config.COLOR_STATE_ATTACKING if current_state == EntityState.ATACANDO else config.COLOR_TEXT_GOLD
+                    pygame.draw.rect(surface, bar_col, cd_fill_rect, border_radius=3)
 
                 dmg_str = f"ATK: {combat.damage}"
                 dmg_surf = font_small.render(dmg_str, True, config.COLOR_TEXT_SECONDARY)
                 dmg_rect = dmg_surf.get_rect(center=(draw_x + self.width // 2, cd_bar_y + 18))
                 surface.blit(dmg_surf, dmg_rect)
         else:
-            name_surf = font_small.render(self.entity.name, True, config.COLOR_TEXT_MUTED)
+            name_surf = font_small.render(f"{self.entity.name} (MORTO)", True, config.COLOR_TEXT_MUTED)
             name_surf.set_alpha(128)
             name_rect = name_surf.get_rect(center=(draw_x + self.width // 2, draw_y - 20))
             surface.blit(name_surf, name_rect)

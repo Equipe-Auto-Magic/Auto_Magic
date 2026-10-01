@@ -12,7 +12,6 @@ IMG_BG_PATH = str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "
 BACKGROUND_IMAGES = [
     str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg"),
     str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-magica.png"),
-    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-noturna.png"),
     str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-outono.png"),
 ]
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
@@ -33,6 +32,14 @@ COLOR_ENEMY = (235, 87, 87)        # Vermelho Carmesim
 COLOR_ENEMY_SHADOW = (130, 30, 30)
 COLOR_MAGE = (150, 120, 25)         # Amarelo Dourado
 COLOR_MAGE_SHADOW = (150, 120, 0)
+
+# Cores da Máquina de Estados (Feedback Visual)
+COLOR_STATE_WALK_ALLY = (45, 156, 219)     # Azul (Aliados em movimento)
+COLOR_STATE_WALK_ENEMY = (242, 153, 74)    # Laranja (Inimigos em movimento)
+COLOR_STATE_PREPARING = (241, 196, 15)     # Amarelo (Carregando golpe/cooldown no range)
+COLOR_STATE_ATTACKING = (235, 87, 87)      # Vermelho (Instante do ataque / dano)
+COLOR_STATE_ATTACK_FLASH = (255, 255, 255) # Flash branco no ataque
+COLOR_STATE_DEAD = (128, 128, 128)         # Cinza (Fora de combate)
 
 # Cores da Interface e Barras de HP
 COLOR_HP_HIGH = (46, 204, 113)     # Verde
