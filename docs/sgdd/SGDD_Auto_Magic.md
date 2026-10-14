@@ -5,7 +5,7 @@
 * **Título:** Auto Magic
 * **Gênero:** RPG de fantasia tático com combate automático.
 * **Plataforma/Tecnologia:** PC / Local para um jogador (Python com Pygame-CE).
-* **Resumo:** O jogador conduz uma equipe de heróis por uma floresta ameaçada por forças sombrias, preparando combatentes antes de cada batalha e acompanhando a luta. A ação é resolvida autonomamente pelas unidades; a estratégia nasce da escolha da equipe, de seus atributos e do posicionamento. A campanha é curta, estruturada em duas regiões e quatro salas.
+* **Resumo:** O jogador conduz uma equipe de heróis por uma floresta ameaçada por forças sombrias, preparando combatentes antes de cada batalha e acompanhando a luta. A ação é resolvida autonomamente pelas unidades; a estratégia nasce da escolha da equipe, de seus atributos e do posicionamento.
 
 ---
 
@@ -39,7 +39,7 @@
 
 * Derrotar todos os inimigos da sala conclui o encontro `[som: vitória na sala]`.
 * A equipe avança para a próxima sala **mantendo a vida restante** do combate anterior.
-* O ciclo de preparação e combate se repete pelas quatro salas da campanha:
+* O ciclo de preparação e combate se repete pelas campanha. Exemplo: de cenários:
 1. **Floresta Sombria** `[Música: Tema da Floresta]` — Entrada da Floresta e Clareira dos Guardiões (Goblins e Guardas Corrompidos).
 2. **Santuário Oculto** `[Música: Tema do Santuário]` — Ponte das Brumas e Câmara do Lorde Bruxo (Guardiões e o Boss Lorde Bruxo).
 
@@ -48,7 +48,7 @@
 ### 2.5 Pausa e Encerramentos
 
 * Pressionar `Esc` durante a batalha abre o menu de pausa `[UI: Tela de Pausa]` `[som: pausa]`, permitindo retomar o jogo ou sair para o menu principal com confirmação.
-* **Vitória Global (Derrota do Lorde Bruxo na Sala 4):** Exibe a **Tela de Vitória** `[Música: Fanfarra de Vitória]` `[UI: Painel de Sucesso]`, com opções de revanche ou retorno ao menu.
+* **Vitória Global (Derrota do Lorde Bruxo):** Exibe a **Tela de Vitória** `[Música: Tema de Vitória]` `[UI: Painel de Sucesso]`, com opções de revanche ou retorno ao menu.
 * **Derrota (Morte de todos os heróis):** Exibe a **Tela de Game Over** `[Música: Tema de Derrota]` `[UI: Painel de Fracasso]`, com botões de tentar novamente ou voltar ao menu `[som: clique de botão]`.
 
 ---
@@ -68,11 +68,12 @@
 * **Cenários (Backgrounds):**
 * Fundo da Floresta Sombria (Entrada e Clareira).
 * Fundo do Santuário Oculto (Ponte e Câmara do Boss).
+* Outros cenários.
 
 
 * **Personagens e Animações (Sprite Sheets):**
-* **Heróis (Duelist, Hunter, Mage):** Animações de Parado/Idle, Andar, Preparar/Cooldown, Ataque, Magia, Dano, Morte.
-* **Inimigos (Goblin, Guarda, Invocador, Guardião, Lorde Bruxo):** Animações de Parado, Andar, Ataque, Dano, Morte.
+* **Heróis (Duelist, Hunter, Mage, etc):** Animações de Parado/Idle, Andar, Preparar/Cooldown, Ataque, Magia, Dano, Morte.
+* **Inimigos (Goblin, Guarda, Invocador, Guardião, Lorde Bruxo, etc):** Animações de Parado, Andar, Ataque, Dano, Morte.
 
 
 * **Elementos de Interface e Efeitos Visuais (VFX):**
