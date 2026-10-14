@@ -8,11 +8,13 @@ from pathlib import Path
 SCREEN_WIDTH = 1080
 SCREEN_HEIGHT = 720
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-IMG_BG_PATH = str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg")
+ASSETS_DIR = PROJECT_ROOT / "assets"
+BACKGROUND_DIR = ASSETS_DIR / "images" / "backgrounds"
+IMG_BG_PATH = str(BACKGROUND_DIR / "bg-flore.jpg")
 BACKGROUND_IMAGES = [
-    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-flore.jpg"),
-    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-magica.png"),
-    str(PROJECT_ROOT / "src" / "assets" / "images" / "backgrounds" / "bg-floresta-outono.png"),
+    str(BACKGROUND_DIR / "bg-flore.jpg"),
+    str(BACKGROUND_DIR / "bg-floresta-magica.png"),
+    str(BACKGROUND_DIR / "bg-floresta-outono.png"),
 ]
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
 FPS = 60

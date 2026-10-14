@@ -19,7 +19,7 @@ class BaseScene:
             bg_target = path if path is not None else config.IMG_BG_PATH
             bg_path = Path(bg_target)
             if not bg_path.is_absolute():
-                bg_path = Path(__file__).resolve().parents[1] / bg_path
+                bg_path = config.PROJECT_ROOT / bg_path
 
             image = pygame.image.load(str(bg_path)).convert()
             return pygame.transform.smoothscale(image, (config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
