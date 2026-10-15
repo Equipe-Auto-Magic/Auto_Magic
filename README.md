@@ -77,8 +77,13 @@ No Windows, também é possível iniciar com `run.bat`.
 ├── assets/
 │   └── images/
 ├── docs/
+│   ├── componentes/
+│   │   └── Componentes.md
 │   ├── entidades/
+│   │   ├── Apresentacao_Entidades_Auto_Magic.pdf
+│   │   └── Entidades_Consolidado.md
 │   └── sgdd/
+│       └── SGDD_Auto_Magic.md
 └── src/
     ├── config.py
     ├── entity.py
@@ -93,6 +98,9 @@ No Windows, também é possível iniciar com `run.bat`.
 ```
 
 - [SGDD — Auto Magic](docs/sgdd/SGDD_Auto_Magic.md): visão e fluxo planejado do jogo.
+- [Componentes do jogo](docs/componentes/Componentes.md): responsabilidades dos componentes e sua interação no combate.
+- [Entidades do jogo](docs/entidades/Entidades_Consolidado.md): perfis, comportamento e inimigos do MVP.
+- [Apresentação das entidades](docs/entidades/Apresentacao_Entidades_Auto_Magic.pdf): visão visual dos combatentes e de seu ciclo de comportamento.
 - `src/stage_data.py`: configuração das fases, salas e inimigos.
 - `src/entity.py`: entidades e componentes de vida, movimento, combate e apresentação.
 - `src/stage_manager.py`: progressão entre salas, fases e resultados.
