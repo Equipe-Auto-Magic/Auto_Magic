@@ -27,6 +27,8 @@ enxuto: usa um Herói e um Mago fixos, sem seleção de elenco ou tela de prepar
 - Combate automático entre dois aliados fixos e os inimigos de cada sala.
 - Seleção automática do adversário vivo mais próximo; unidades se movimentam até
   ficarem ao alcance e atacam ao completar a recarga.
+- Mecânica Rally: após receber um golpe, clique no inimigo que o causou em até
+  um segundo para recuperar 50% do dano recente causado por ele.
 - Indicadores de vida, dano, recarga e estado, além de números flutuantes de dano e
   feedback visual para ataque, dano e derrota.
 - Duas fases com duas salas cada: Floresta Sombria e Santuário Oculto.

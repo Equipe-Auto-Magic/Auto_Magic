@@ -12,8 +12,8 @@ As responsabilidades dos componentes estão descritas em
 
 | Entidade | Papel e comportamento no MVP | Perfil configurado |
 | --- | --- | --- |
-| **Herói** | Combatente corpo a corpo da linha de frente. Avança até o inimigo vivo mais próximo e ataca quando a recarga termina. | 1110 HP, 18 de dano, velocidade 120, alcance 45 e recarga de 1,5 s. |
-| **Mago** | Aliado de longo alcance, posicionado atrás do Herói no início das salas. Busca alvos e ataca com alcance maior e recarga mais longa. | 30 HP, 12 de dano, velocidade 90, alcance 350 e recarga de 2 s. |
+| **Herói** | Combatente corpo a corpo da linha de frente. Avança até o inimigo vivo mais próximo e ataca quando a recarga termina. | 240 HP, 18 de dano, velocidade 120, alcance 45 e recarga de 1,5 s. |
+| **Mago** | Aliado de longo alcance, posicionado atrás do Herói no início das salas. Busca alvos e ataca com alcance maior e recarga mais longa. | 80 HP, 12 de dano, velocidade 90, alcance 350 e recarga de 2 s. |
 
 O Mago pode avançar até o alvo se ele estiver além do alcance; o código não implementa
 uma regra para manter distância ou permanecer sempre na retaguarda.
@@ -41,6 +41,10 @@ Durante a batalha, cada combatente procura o adversário vivo mais próximo. For
 alcance, move-se em sua direção; ao alcançá-lo, para e prepara o ataque enquanto a
 recarga avança. Quando está pronto, a `BattleScene` aplica o dano. A unidade pode
 passar pelos estados **andando**, **preparando**, **atacando** e **morto**.
+
+Após um inimigo atingir um aliado, o jogador tem 1 segundo para clicar nesse inimigo
+e recuperar 50% do dano recente que ele causou. O Rally não ultrapassa a vida máxima,
+não revive aliados e destaca visualmente os inimigos com recuperação disponível.
 
 O `StageManager` monta cada sala e configura as equipes oponentes; a `BattleScene`
 atualiza e desenha as entidades e coordena os ataques. A morte de um aliado ativa
