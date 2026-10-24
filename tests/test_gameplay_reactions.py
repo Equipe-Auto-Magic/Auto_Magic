@@ -11,6 +11,7 @@ from src.entity import (
     TargetingComponent,
     TransformComponent,
 )
+from src.events import gerenciador_eventos
 from src.scenes.battle_scene import (
     BattleScene,
     CriticalOpportunity,
@@ -39,6 +40,51 @@ def make_scene():
 
 
 class ReactionMechanicsTests(unittest.TestCase):
+    def test_damage_event_creates_reaction_opportunities(self):
+        scene = make_scene()
+        ally = make_entity("Herói", "aliado", hp=100, x=100)
+        enemy = make_entity("Goblin", "inimigo", hp=50, x=500)
+        gerenciador_eventos.inscrever("dano_recebido", scene)
+
+        try:
+            ally.take_damage(20, attacker=enemy)
+            enemy.take_damage(12, attacker=ally)
+        finally:
+            gerenciador_eventos.desinscrever("dano_recebido", scene)
+
+        self.assertEqual(ally.current_hp, 80)
+        self.assertEqual(len(scene.rally_opportunities), 1)
+        self.assertIs(scene.rally_opportunities[0].attacker, enemy)
+        self.assertEqual(scene.rally_opportunities[0].damage_taken, 20)
+        self.assertEqual(len(scene.critical_opportunities), 1)
+        self.assertIs(scene.critical_opportunities[0].attacker, ally)
+        self.assertEqual(scene.critical_opportunities[0].damage_dealt, 12)
+
+    def test_damage_event_reports_only_effective_positive_damage(self):
+        class DamageObserver:
+            def __init__(self):
+                self.events = []
+
+            def ao_notificar(self, evento, dados):
+                self.events.append(dados)
+
+        observer = DamageObserver()
+        target = make_entity("Herói", "aliado", hp=10, x=100)
+        source = make_entity("Goblin", "inimigo", hp=50, x=500)
+        gerenciador_eventos.inscrever("dano_recebido", observer)
+
+        try:
+            self.assertEqual(target.take_damage(20, attacker=source), 10)
+            self.assertEqual(target.take_damage(1, attacker=source), 0)
+            self.assertEqual(target.take_damage(0, attacker=source), 0)
+        finally:
+            gerenciador_eventos.desinscrever("dano_recebido", observer)
+
+        self.assertEqual(len(observer.events), 1)
+        self.assertEqual(observer.events[0].amount, 10)
+        self.assertIs(observer.events[0].target, target)
+        self.assertIs(observer.events[0].attacker, source)
+
     def test_dead_entity_is_not_drawn_on_the_battlefield(self):
         entity = Entity(name="Goblin", team="inimigo")
         entity.add_component(TransformComponent(x=100, y=100))

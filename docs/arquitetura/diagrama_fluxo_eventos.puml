@@ -1,0 +1,69 @@
+@startuml AutoMagicDamageFlow
+title Auto Magic - Fluxo de dano e reações (Observer)
+autonumber
+
+actor Jogador
+participant "BattleScene" as BattleScene
+participant "Atacante" as Attacker
+participant "Alvo" as Target
+participant "HealthComponent\n(do alvo)" as Health
+participant "EventBus global" as EventBus
+participant "StageManager\n(Observador)" as StageManager
+participant "BuffDeFuria\n(Observador)" as Fury
+
+== Ataque automático ==
+
+BattleScene -> Attacker: verifica can_attack() e alvo
+Attacker --> BattleScene: pronto e com alvo válido
+BattleScene -> Target: take_damage(dano, atacante)
+Target -> Health: take_damage(dano, atacante)
+Health -> Health: reduz HP
+alt dano efetivo maior que zero
+    Health -> EventBus: notificar("dano_recebido", DamageEvent)
+    EventBus -> BattleScene: ao_notificar(evento, dados)
+    alt alvo vivo e equipes opostas
+        BattleScene -> BattleScene: registra Rally ou Critical
+    else alvo derrotado ou atacante ausente
+        BattleScene -> BattleScene: não abre oportunidade
+    end
+end
+
+alt alvo derrotado
+    Health -> EventBus: notificar("entidade_morta", alvo)
+    EventBus -> Fury: ao_notificar(evento, alvo)
+    opt aliado derrotado
+        Fury -> Fury: aumenta dano dos aliados vivos
+    end
+    EventBus -> StageManager: ao_notificar(evento, alvo)
+    StageManager -> StageManager: verifica vitória ou derrota
+end
+
+== Reação manual ==
+
+Jogador -> BattleScene: clica em aliado ferido
+BattleScene -> BattleScene: valida janela de Rally
+BattleScene -> Target: heal(50% do dano recente)
+Target -> Health: heal(quantidade)
+Health -> Health: recupera HP até o máximo
+
+Jogador -> BattleScene: clica em inimigo atingido
+BattleScene -> BattleScene: valida janela e recarga de Critical
+BattleScene -> Target: take_damage(bônus)
+Target -> Health: take_damage(bônus)
+Health -> Health: reduz HP
+
+note over Health,EventBus
+  HealthComponent altera a vida e publica os resultados.
+  Os observadores reagem; eles não aplicam o dano original.
+end note
+
+note over BattleScene,Target
+  O dano bônus do Critical também passa por take_damage,
+  mas sem atacante; portanto, não abre outra janela Critical.
+end note
+
+note over BattleScene,StageManager
+  BattleScene observa dano para criar janelas de reação.
+  StageManager observa mortes para decidir o estado da sala.
+end note
+@enduml

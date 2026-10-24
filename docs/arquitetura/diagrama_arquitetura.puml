@@ -1,0 +1,159 @@
+@startuml AutoMagicClassDiagram
+title Auto Magic - Estrutura atual do jogo
+skinparam classAttributeIconSize 0
+hide empty members
+
+class Game {
+    +current_scene
+    +change_scene(new_scene)
+    +run()
+}
+
+class BaseScene {
+    +game
+    +handle_event(event)
+    +update(dt)
+    +draw(surface)
+}
+
+class MenuScene {
+    +buttons
+    +on_click_play()
+    +on_click_quit()
+}
+
+class Button {
+    +text
+    +handle_event(event)
+    +draw(surface, font)
+}
+
+class BattleScene {
+    +time_aliados
+    +time_inimigos
+    +rally_opportunities
+    +critical_opportunities
+    +update(dt)
+    +draw(surface)
+    +ao_notificar(evento, dados)
+}
+
+class Entity {
+    +name
+    +team
+    +add_component(component)
+    +get_component(type)
+    +take_damage(amount, attacker)
+    +heal(amount)
+}
+
+class Component {
+    +entity
+    +update(dt)
+    +draw(surface, fonts)
+}
+
+class TransformComponent
+class HealthComponent {
+    +max_hp
+    +current_hp
+    +take_damage(amount, attacker)
+    +heal(amount)
+}
+class MovementComponent
+class CombatComponent
+class TargetingComponent
+class SpriteComponent
+class Warrior <<compatibilidade>>
+class Mage <<compatibilidade>>
+
+interface Observador {
+    +ao_notificar(evento, dados)
+}
+
+class EventBus {
+    +inscrever(evento, observador)
+    +desinscrever(evento, observador)
+    +notificar(evento, dados)
+}
+
+class DamageEvent {
+    +target
+    +attacker
+    +amount
+}
+
+class BuffDeFuria
+
+class StageManager {
+    +state
+    +update(dt)
+    +ao_notificar(evento, dados)
+}
+
+class StageConfig
+class RoomConfig
+class EnemyConfig
+class EnemyFactory
+class RallyOpportunity
+class CriticalOpportunity
+class FloatingText
+object gerenciador_eventos
+
+BaseScene <|-- BattleScene
+BaseScene <|-- MenuScene
+Observador <|.. BattleScene
+Observador <|.. StageManager
+Observador <|.. BuffDeFuria
+
+Game o-- BaseScene : cena atual
+MenuScene *-- "2" Button
+MenuScene ..> BattleScene : inicia
+
+Entity *-- "0..1" TransformComponent
+Entity *-- "0..1" HealthComponent
+Entity *-- "0..1" MovementComponent
+Entity *-- "0..1" CombatComponent
+Entity *-- "0..1" TargetingComponent
+Entity *-- "0..1" SpriteComponent
+Component <|-- TransformComponent
+Component <|-- HealthComponent
+Component <|-- MovementComponent
+Component <|-- CombatComponent
+Component <|-- TargetingComponent
+Component <|-- SpriteComponent
+Entity <|-- Warrior
+Entity <|-- Mage
+
+BattleScene o-- "1" StageManager
+BattleScene o-- "0..*" Entity : aliados e inimigos
+BattleScene o-- "0..*" RallyOpportunity
+BattleScene o-- "0..*" CriticalOpportunity
+BattleScene o-- "0..*" FloatingText
+StageManager --> "0..*" StageConfig
+StageConfig *-- "1..*" RoomConfig
+RoomConfig *-- "0..*" EnemyConfig
+EnemyFactory ..> EnemyConfig : cria
+EnemyFactory ..> Entity : instancia
+StageManager --> Entity : acompanha equipes
+BuffDeFuria --> Entity : aplica bônus aos aliados
+
+HealthComponent ..> gerenciador_eventos : publica dano_recebido\n e entidade_morta
+gerenciador_eventos o-- EventBus
+EventBus ..> Observador : notifica inscritos
+DamageEvent --> Entity : alvo e atacante
+BattleScene ..> DamageEvent : interpreta dano_recebido
+
+note right of Entity
+  Herói e inimigos do fluxo atual são montados
+  como Entity com os seis componentes listados.
+  O contêiner permite outras composições.
+end note
+
+note right of EnemyFactory
+  Cria inimigos diretamente como Entity.
+  Warrior e Mage existem como subclasses de
+  compatibilidade, mas não são instanciadas
+  no fluxo atual da batalha.
+end note
+@enduml

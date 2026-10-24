@@ -225,10 +225,10 @@ class Entity:
         health = self.get_component(HealthComponent)
         return health.is_alive() if health else False
 
-    def take_damage(self, amount: int) -> int:
+    def take_damage(self, amount: int, attacker: Optional['Entity'] = None) -> int:
         """Aplica dano e retorna a quantidade efetivamente removida da vida."""
         health = self.get_component(HealthComponent)
-        damage_taken = health.take_damage(amount) if health else 0
+        damage_taken = health.take_damage(amount, attacker) if health else 0
         sprite = self.get_component(SpriteComponent)
         if sprite and damage_taken > 0:
             sprite.trigger_damage_flash()
@@ -328,12 +328,18 @@ class HealthComponent(Component):
     def is_alive(self) -> bool:
         return self.current_hp > 0 and self.state != EntityState.MORTO
 
-    def take_damage(self, amount: int) -> int:
+    def take_damage(self, amount: int, attacker: Optional[Entity] = None) -> int:
         if not self.is_alive():
             return 0
 
         damage_taken = min(max(0, amount), self.current_hp)
         self.current_hp -= damage_taken
+        if damage_taken > 0 and self.entity is not None:
+            from src.events import DamageEvent
+            gerenciador_eventos.notificar(
+                "dano_recebido",
+                DamageEvent(target=self.entity, attacker=attacker, amount=damage_taken),
+            )
         if self.current_hp <= 0:
             self.state = EntityState.MORTO
             if self.entity is not None:

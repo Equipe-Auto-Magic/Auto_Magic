@@ -14,7 +14,7 @@ from src.entity import (
     Mage
 )
 from src.scenes.base_scene import BaseScene
-from src.events import gerenciador_eventos, BuffDeFuria
+from src.events import DamageEvent, Observador, gerenciador_eventos, BuffDeFuria
 from src.stage_manager import StageManager, StageState
 
 
@@ -53,7 +53,7 @@ class FloatingText:
         return self.lifetime <= 0
 
 
-class BattleScene(BaseScene):
+class BattleScene(BaseScene, Observador):
     """Cena de Batalha com Sistema de Fases e Salas (Auto Battler RPG)."""
 
     def __init__(self, game):
@@ -69,6 +69,7 @@ class BattleScene(BaseScene):
         self.rally_opportunities = []
         self.critical_opportunities = []
         self.critical_cooldown_timer = 0.0
+        gerenciador_eventos.inscrever("dano_recebido", self)
 
         # 1. Aliados são criados uma ÚNICA vez no início da batalha usando o Padrão de Componentes
         self.hero = Entity(name="Herói", team="aliado")
@@ -104,6 +105,7 @@ class BattleScene(BaseScene):
         """Limpa inscrições de observadores para evitar retenção de referências."""
         if hasattr(self, 'buff_furia'):
             gerenciador_eventos.desinscrever("entidade_morta", self.buff_furia)
+        gerenciador_eventos.desinscrever("dano_recebido", self)
         if hasattr(self, 'stage_manager'):
             self.stage_manager.cleanup()
 
@@ -118,6 +120,34 @@ class BattleScene(BaseScene):
             self.game.change_scene(MenuScene(self.game))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._handle_reaction_click(event.pos)
+
+    def ao_notificar(self, evento: str, dados) -> None:
+        """Registra janelas de reação a partir dos eventos de dano da batalha."""
+        if evento != "dano_recebido" or not isinstance(dados, DamageEvent):
+            return
+        if self.stage_manager.state != StageState.COMBATE or dados.attacker is None:
+            return
+        if not dados.target.is_alive():
+            return
+
+        if dados.attacker.team == "inimigo" and dados.target.team == "aliado":
+            self.rally_opportunities.append(
+                RallyOpportunity(
+                    attacker=dados.attacker,
+                    ally=dados.target,
+                    damage_taken=dados.amount,
+                    time_left=config.RALLY_WINDOW_SECONDS,
+                )
+            )
+        elif dados.attacker.team == "aliado" and dados.target.team == "inimigo":
+            self.critical_opportunities.append(
+                CriticalOpportunity(
+                    attacker=dados.attacker,
+                    enemy=dados.target,
+                    damage_dealt=dados.amount,
+                    time_left=config.CRITICAL_WINDOW_SECONDS,
+                )
+            )
 
     def _handle_reaction_click(self, position: tuple[int, int]) -> None:
         if self.stage_manager.state != StageState.COMBATE:
@@ -332,27 +362,7 @@ class BattleScene(BaseScene):
         for attacker in self.todas_entidades():
             if attacker.can_attack() and attacker.target is not None and attacker.target.is_alive():
                 target = attacker.target
-                damage_taken = target.take_damage(attacker.attack_damage)
-                if (attacker.team == "inimigo" and target.team == "aliado"
-                        and damage_taken > 0 and target.is_alive()):
-                    self.rally_opportunities.append(
-                        RallyOpportunity(
-                            attacker=attacker,
-                            ally=target,
-                            damage_taken=damage_taken,
-                            time_left=config.RALLY_WINDOW_SECONDS
-                        )
-                    )
-                elif (attacker.team == "aliado" and target.team == "inimigo"
-                      and damage_taken > 0 and target.is_alive()):
-                    self.critical_opportunities.append(
-                        CriticalOpportunity(
-                            attacker=attacker,
-                            enemy=target,
-                            damage_dealt=damage_taken,
-                            time_left=config.CRITICAL_WINDOW_SECONDS
-                        )
-                    )
+                target.take_damage(attacker.attack_damage, attacker=attacker)
                 attacker.reset_cooldown()
                 attacker.trigger_attack_feedback()
 

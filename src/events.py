@@ -3,7 +3,20 @@ Módulo de Eventos e Padrão de Projeto Observer para o Auto-Battler.
 Contém a infraestrutura do EventBus, a classe base Observador e as Habilidades Passivas.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from src.entity import Entity
+
+
+@dataclass(frozen=True)
+class DamageEvent:
+    """Registra o dano efetivamente aplicado sem expor a lógica de vida."""
+
+    target: "Entity"
+    attacker: Optional["Entity"]
+    amount: int
 
 
 class Observador(ABC):
