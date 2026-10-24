@@ -1,8 +1,16 @@
 import unittest
 from types import SimpleNamespace
 
+import pygame
+
 from src import config
-from src.entity import Entity, HealthComponent, TargetingComponent, TransformComponent
+from src.entity import (
+    Entity,
+    HealthComponent,
+    SpriteComponent,
+    TargetingComponent,
+    TransformComponent,
+)
 from src.scenes.battle_scene import (
     BattleScene,
     CriticalOpportunity,
@@ -31,6 +39,21 @@ def make_scene():
 
 
 class ReactionMechanicsTests(unittest.TestCase):
+    def test_dead_entity_is_not_drawn_on_the_battlefield(self):
+        entity = Entity(name="Goblin", team="inimigo")
+        entity.add_component(TransformComponent(x=100, y=100))
+        entity.add_component(HealthComponent(max_hp=10))
+        sprite = SpriteComponent()
+        entity.add_component(sprite)
+        entity.take_damage(10)
+        surface = pygame.Surface((300, 300))
+        background_color = (20, 30, 40)
+        surface.fill(background_color)
+
+        sprite.draw(surface, None, None)
+
+        self.assertEqual(surface.get_at((105, 110))[:3], background_color)
+
     def test_rally_heals_half_recent_damage_and_consumes_window(self):
         scene = make_scene()
         ally = make_entity("Herói", "aliado", hp=100, x=100)

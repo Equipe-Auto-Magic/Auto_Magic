@@ -662,14 +662,15 @@ class SpriteComponent(Component):
         if not self.entity:
             return
 
-        transform = self.entity.get_component(TransformComponent)
         health = self.entity.get_component(HealthComponent)
+        if health and not health.is_alive():
+            return
+
+        transform = self.entity.get_component(TransformComponent)
         combat = self.entity.get_component(CombatComponent)
 
         draw_x = int(transform.x if transform else 0) + self.shake_offset_x
         draw_y = int(transform.y if transform else 0) + self.shake_offset_y
-
-        is_dead = health is not None and not health.is_alive()
 
         # Superfície do sprite com suporte a transparência (Alpha)
         sprite_w = self.width + 10
@@ -678,11 +679,10 @@ class SpriteComponent(Component):
 
         # Sombra sob o personagem
         shadow_rect = pygame.Rect(5, 10, self.width, self.height)
-        shadow_col = (80, 80, 80) if is_dead else self.shadow_color
-        pygame.draw.rect(sprite_surf, shadow_col, shadow_rect, border_radius=12)
+        pygame.draw.rect(sprite_surf, self.shadow_color, shadow_rect, border_radius=12)
 
         # Cor do corpo baseada no estado visual atual (ou flash de dano)
-        if self.flash_timer > 0 and not is_dead:
+        if self.flash_timer > 0:
             main_color = (255, 255, 255)
         else:
             main_color = self.current_render_color
@@ -691,86 +691,80 @@ class SpriteComponent(Component):
         pygame.draw.rect(sprite_surf, main_color, char_rect, border_radius=12)
         pygame.draw.rect(sprite_surf, config.COLOR_PANEL_BORDER, char_rect, width=2, border_radius=12)
 
-        # Aplica opacidade (Alpha 128 quando morto)
+        # Aplica opacidade
         sprite_surf.set_alpha(self.current_alpha)
 
         surface.blit(sprite_surf, (draw_x, draw_y))
 
         # Elementos de UI sobre a entidade
-        if not is_dead:
-            current_state = self.entity.state
-            if current_state == EntityState.ANDANDO:
-                state_icon = "→ ANDANDO"
-                state_color = config.COLOR_TEXT_PRIMARY
-            elif current_state == EntityState.PREPARANDO:
-                state_icon = "⏳ PREPARANDO"
-                state_color = config.COLOR_STATE_PREPARING
-            elif current_state == EntityState.ATACANDO:
-                state_icon = "⚔ ATACANDO"
-                state_color = config.COLOR_STATE_ATTACKING
-            else:
-                state_icon = current_state
-                state_color = config.COLOR_TEXT_GOLD
-
-            state_surf = font_small.render(state_icon, True, state_color)
-            state_rect = state_surf.get_rect(center=(draw_x + self.width // 2, draw_y - self.height + 70))
-            surface.blit(state_surf, state_rect)
-
-            # Nome
-            name_surf = font_bold.render(self.entity.name, True, config.COLOR_TEXT_PRIMARY)
-            name_rect = name_surf.get_rect(center=(draw_x + self.width // 2, draw_y - 45))
-            surface.blit(name_surf, name_rect)
-
-            # Barra de Vida (HP)
-            if health:
-                bar_width = 130
-                bar_height = 16
-                bar_x = draw_x + (self.width - bar_width) // 2
-                bar_y = draw_y - 25
-
-                bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
-                pygame.draw.rect(surface, config.COLOR_HP_BG, bg_bar_rect, border_radius=8)
-
-                hp_pct = health.get_hp_percentage()
-                fill_width = int(bar_width * hp_pct)
-                if fill_width > 0:
-                    fill_rect = pygame.Rect(bar_x, bar_y, fill_width, bar_height)
-                    pygame.draw.rect(surface, health.get_hp_color(), fill_rect, border_radius=8)
-
-                pygame.draw.rect(surface, config.COLOR_HP_BORDER, bg_bar_rect, width=2, border_radius=8)
-
-                hp_str = f"{health.current_hp}/{health.max_hp}"
-                hp_surf = font_small.render(hp_str, True, config.COLOR_TEXT_PRIMARY)
-                hp_rect = hp_surf.get_rect(center=bg_bar_rect.center)
-                surface.blit(hp_surf, hp_rect)
-
-            # Barra de Cooldown de Ataque
-            if combat:
-                cd_bar_width = self.width
-                cd_bar_height = 6
-                cd_bar_x = draw_x
-                cd_bar_y = draw_y + self.height + 10
-
-                cd_bg_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_bar_width, cd_bar_height)
-                pygame.draw.rect(surface, config.COLOR_HP_BG, cd_bg_rect, border_radius=3)
-
-                cd_pct = min(1.0, combat.cooldown_timer / combat.cooldown) if combat.cooldown > 0 else 1.0
-                cd_fill_width = int(cd_bar_width * cd_pct)
-                if cd_fill_width > 0:
-                    cd_fill_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_fill_width, cd_bar_height)
-                    # Barra amarela durante preparação, vermelha no ataque
-                    bar_col = config.COLOR_STATE_ATTACKING if current_state == EntityState.ATACANDO else config.COLOR_TEXT_GOLD
-                    pygame.draw.rect(surface, bar_col, cd_fill_rect, border_radius=3)
-
-                dmg_str = f"ATK: {combat.damage}"
-                dmg_surf = font_small.render(dmg_str, True, config.COLOR_TEXT_SECONDARY)
-                dmg_rect = dmg_surf.get_rect(center=(draw_x + self.width // 2, cd_bar_y + 18))
-                surface.blit(dmg_surf, dmg_rect)
+        current_state = self.entity.state
+        if current_state == EntityState.ANDANDO:
+            state_icon = "→ ANDANDO"
+            state_color = config.COLOR_TEXT_PRIMARY
+        elif current_state == EntityState.PREPARANDO:
+            state_icon = "⏳ PREPARANDO"
+            state_color = config.COLOR_STATE_PREPARING
+        elif current_state == EntityState.ATACANDO:
+            state_icon = "⚔ ATACANDO"
+            state_color = config.COLOR_STATE_ATTACKING
         else:
-            name_surf = font_small.render(f"{self.entity.name} (MORTO)", True, config.COLOR_TEXT_MUTED)
-            name_surf.set_alpha(128)
-            name_rect = name_surf.get_rect(center=(draw_x + self.width // 2, draw_y - 20))
-            surface.blit(name_surf, name_rect)
+            state_icon = current_state
+            state_color = config.COLOR_TEXT_GOLD
+
+        state_surf = font_small.render(state_icon, True, state_color)
+        state_rect = state_surf.get_rect(center=(draw_x + self.width // 2, draw_y - self.height + 70))
+        surface.blit(state_surf, state_rect)
+
+        # Nome
+        name_surf = font_bold.render(self.entity.name, True, config.COLOR_TEXT_PRIMARY)
+        name_rect = name_surf.get_rect(center=(draw_x + self.width // 2, draw_y - 45))
+        surface.blit(name_surf, name_rect)
+
+        # Barra de Vida (HP)
+        if health:
+            bar_width = 130
+            bar_height = 16
+            bar_x = draw_x + (self.width - bar_width) // 2
+            bar_y = draw_y - 25
+
+            bg_bar_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
+            pygame.draw.rect(surface, config.COLOR_HP_BG, bg_bar_rect, border_radius=8)
+
+            hp_pct = health.get_hp_percentage()
+            fill_width = int(bar_width * hp_pct)
+            if fill_width > 0:
+                fill_rect = pygame.Rect(bar_x, bar_y, fill_width, bar_height)
+                pygame.draw.rect(surface, health.get_hp_color(), fill_rect, border_radius=8)
+
+            pygame.draw.rect(surface, config.COLOR_HP_BORDER, bg_bar_rect, width=2, border_radius=8)
+
+            hp_str = f"{health.current_hp}/{health.max_hp}"
+            hp_surf = font_small.render(hp_str, True, config.COLOR_TEXT_PRIMARY)
+            hp_rect = hp_surf.get_rect(center=bg_bar_rect.center)
+            surface.blit(hp_surf, hp_rect)
+
+        # Barra de Cooldown de Ataque
+        if combat:
+            cd_bar_width = self.width
+            cd_bar_height = 6
+            cd_bar_x = draw_x
+            cd_bar_y = draw_y + self.height + 10
+
+            cd_bg_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_bar_width, cd_bar_height)
+            pygame.draw.rect(surface, config.COLOR_HP_BG, cd_bg_rect, border_radius=3)
+
+            cd_pct = min(1.0, combat.cooldown_timer / combat.cooldown) if combat.cooldown > 0 else 1.0
+            cd_fill_width = int(cd_bar_width * cd_pct)
+            if cd_fill_width > 0:
+                cd_fill_rect = pygame.Rect(cd_bar_x, cd_bar_y, cd_fill_width, cd_bar_height)
+                # Barra amarela durante preparação, vermelha no ataque
+                bar_col = config.COLOR_STATE_ATTACKING if current_state == EntityState.ATACANDO else config.COLOR_TEXT_GOLD
+                pygame.draw.rect(surface, bar_col, cd_fill_rect, border_radius=3)
+
+            dmg_str = f"ATK: {combat.damage}"
+            dmg_surf = font_small.render(dmg_str, True, config.COLOR_TEXT_SECONDARY)
+            dmg_rect = dmg_surf.get_rect(center=(draw_x + self.width // 2, cd_bar_y + 18))
+            surface.blit(dmg_surf, dmg_rect)
 
 
 # Alias para SpriteComponent
