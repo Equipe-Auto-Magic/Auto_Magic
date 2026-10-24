@@ -448,11 +448,16 @@ class TargetingComponent(Component):
     - 'ATACANDO': Instante em que desfere o ataque.
     - 'MORTO': HP <= 0.
     """
-    def __init__(self, opponent_team: Optional[List[Entity]] = None):
+    def __init__(
+        self,
+        opponent_team: Optional[List[Entity]] = None,
+        target_preference: str = "nearest",
+    ):
         super().__init__()
         self.opponent_team: List[Entity] = opponent_team if opponent_team is not None else []
         self.target: Optional[Entity] = None
         self.state: str = EntityState.ANDANDO
+        self.target_preference = target_preference
 
     def set_opponent_team(self, team: List[Entity]) -> None:
         self.opponent_team = team
@@ -474,10 +479,23 @@ class TargetingComponent(Component):
         if not self_transform:
             return living[0]
 
-        return min(
-            living,
-            key=lambda opp: abs(opp.rect.centerx - self_transform.rect.centerx)
-        )
+        distances = {
+            opponent: abs(opponent.rect.centerx - self_transform.rect.centerx)
+            for opponent in living
+        }
+
+        if self.target_preference == "backline":
+            return max(living, key=lambda opponent: distances[opponent])
+        if self.target_preference == "vulnerable":
+            return min(
+                living,
+                key=lambda opponent: (
+                    opponent.current_hp / opponent.max_hp
+                    if opponent.max_hp > 0 else 0.0,
+                    distances[opponent],
+                ),
+            )
+        return min(living, key=lambda opponent: distances[opponent])
 
     def get_distance_to(self, target: Entity) -> float:
         """Calcula distância horizontal borda a borda até o alvo."""

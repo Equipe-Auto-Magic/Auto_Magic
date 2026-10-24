@@ -12,7 +12,7 @@ No jogo, cada combatente é montado com estes seis componentes:
 
 | Componente | Responsabilidade |
 | --- | --- |
-| `TargetingComponent` | Escolhe o adversário vivo mais próximo e controla o estado da unidade: andando, preparando o ataque, atacando ou morta. Quando há um alvo fora de alcance, indica a direção do movimento; quando não há alvo, usa a direção padrão. |
+| `TargetingComponent` | Escolhe um adversário vivo conforme a preferência configurada (mais próximo, retaguarda ou menor proporção de vida) e controla o estado da unidade: andando, preparando o ataque, atacando ou morta. Quando há um alvo fora de alcance, indica a direção do movimento; quando não há alvo, usa a direção padrão. |
 | `TransformComponent` | Guarda a posição e as dimensões da unidade, além dos limites usados para calcular distâncias e posicionamento. |
 | `MovementComponent` | Desloca a unidade de acordo com sua velocidade e com a direção definida pelo componente de alvo. |
 | `HealthComponent` | Controla a vida atual e máxima, aplica dano e identifica quando a unidade morre. A morte também gera um evento para os sistemas interessados. |
@@ -32,6 +32,8 @@ definitivos ainda não estão integrados à arena.
 4. A `BattleScene` coordena as entidades e aplica o dano ao alvo. O
    `HealthComponent` atualiza a vida e trata a derrota; o `SpriteComponent` apresenta
    o estado atualizado.
+5. A `BattleScene` registra janelas de reação após dano: o jogador pode clicar no
+   aliado ferido para ativar Rally ou no inimigo atingido para ativar Critical.
 
 ## Composição e coordenação
 

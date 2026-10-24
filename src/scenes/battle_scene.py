@@ -20,9 +20,17 @@ from src.stage_manager import StageManager, StageState
 
 @dataclass
 class RallyOpportunity:
-    enemy: Entity
+    attacker: Entity
     ally: Entity
     damage_taken: int
+    time_left: float
+
+
+@dataclass
+class CriticalOpportunity:
+    attacker: Entity
+    enemy: Entity
+    damage_dealt: int
     time_left: float
 
 
@@ -59,6 +67,8 @@ class BattleScene(BaseScene):
         self.time_aliados = []
         self.time_inimigos = []
         self.rally_opportunities = []
+        self.critical_opportunities = []
+        self.critical_cooldown_timer = 0.0
 
         # 1. Aliados são criados uma ÚNICA vez no início da batalha usando o Padrão de Componentes
         self.hero = Entity(name="Herói", team="aliado")
@@ -107,10 +117,19 @@ class BattleScene(BaseScene):
             from src.scenes.menu_scene import MenuScene
             self.game.change_scene(MenuScene(self.game))
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self._try_rally(event.pos)
+            self._handle_reaction_click(event.pos)
 
-    def _try_rally(self, position: tuple[int, int]) -> None:
+    def _handle_reaction_click(self, position: tuple[int, int]) -> None:
         if self.stage_manager.state != StageState.COMBATE:
+            return
+
+        ally = next(
+            (ally for ally in reversed(self.time_aliados)
+             if ally.is_alive() and ally.rect.collidepoint(position)),
+            None
+        )
+        if ally is not None:
+            self._try_rally(ally)
             return
 
         enemy = next(
@@ -118,73 +137,113 @@ class BattleScene(BaseScene):
              if enemy.is_alive() and enemy.rect.collidepoint(position)),
             None
         )
-        if enemy is None:
-            return
+        if enemy is not None:
+            self._try_critical(enemy)
 
+    def _try_rally(self, ally: Entity) -> None:
         opportunities = [
             opportunity for opportunity in self.rally_opportunities
-            if opportunity.enemy is enemy and opportunity.time_left > 0
+            if opportunity.ally is ally and opportunity.time_left > 0
         ]
         if not opportunities:
             return
 
         self.rally_opportunities = [
             opportunity for opportunity in self.rally_opportunities
-            if opportunity.enemy is not enemy
+            if opportunity.ally is not ally
         ]
-        damage_by_ally = {}
-        for opportunity in opportunities:
-            if opportunity.ally.is_alive():
-                damage_by_ally[opportunity.ally] = (
-                    damage_by_ally.get(opportunity.ally, 0) + opportunity.damage_taken
-                )
-
-        for ally, damage_taken in damage_by_ally.items():
-            recovery = int(damage_taken * config.RALLY_RECOVERY_RATIO)
-            amount_recovered = ally.heal(recovery)
-            if amount_recovered > 0:
-                self.floating_texts.append(
-                    FloatingText(
-                        f"RALLY +{amount_recovered}",
-                        int(ally.x) + 10,
-                        int(ally.y) - 40,
-                        config.COLOR_TEXT_GOLD
-                    )
-                )
-
-    def _update_rally_opportunities(self, dt: float, paused: bool) -> None:
-        if paused:
-            self.rally_opportunities.clear()
+        if not ally.is_alive():
             return
 
+        recent_damage = sum(opportunity.damage_taken for opportunity in opportunities)
+        recovery = int(recent_damage * config.RALLY_RECOVERY_RATIO)
+        amount_recovered = ally.heal(recovery)
+        if amount_recovered > 0:
+            self.floating_texts.append(
+                FloatingText(
+                    f"RALLY +{amount_recovered}",
+                    int(ally.x) + 10,
+                    int(ally.y) - 40,
+                    config.COLOR_TEXT_GOLD
+                )
+            )
+
+    def _try_critical(self, enemy: Entity) -> None:
+        if self.critical_cooldown_timer > 0:
+            return
+
+        opportunity = next(
+            (opportunity for opportunity in reversed(self.critical_opportunities)
+             if opportunity.enemy is enemy and opportunity.time_left > 0),
+            None
+        )
+        if opportunity is None or not enemy.is_alive():
+            return
+
+        bonus_damage = int(
+            opportunity.damage_dealt * (config.CRITICAL_DAMAGE_MULTIPLIER - 1.0)
+        )
+        if bonus_damage <= 0:
+            return
+
+        damage_dealt = enemy.take_damage(bonus_damage)
+        self.critical_opportunities = [
+            pending for pending in self.critical_opportunities
+            if pending.enemy is not enemy
+        ]
+        if damage_dealt <= 0:
+            return
+
+        self.critical_cooldown_timer = config.CRITICAL_COOLDOWN_SECONDS
+        self.floating_texts.append(
+            FloatingText(
+                f"CRITICAL {opportunity.attacker.name} -{damage_dealt}",
+                int(enemy.x) + 30,
+                int(enemy.y) - 40,
+                config.COLOR_STATE_ATTACKING
+            )
+        )
+
+    def _update_reaction_opportunities(self, dt: float, blocked: bool) -> None:
+        if blocked:
+            self.rally_opportunities.clear()
+            self.critical_opportunities.clear()
+            return
+
+        self.critical_cooldown_timer = max(0.0, self.critical_cooldown_timer - dt)
         for opportunity in self.rally_opportunities:
             opportunity.time_left -= dt
         self.rally_opportunities = [
             opportunity for opportunity in self.rally_opportunities
             if opportunity.time_left > 0
             and opportunity.ally.is_alive()
+        ]
+        for opportunity in self.critical_opportunities:
+            opportunity.time_left -= dt
+        self.critical_opportunities = [
+            opportunity for opportunity in self.critical_opportunities
+            if opportunity.time_left > 0
             and opportunity.enemy.is_alive()
         ]
 
-    def _draw_rally_targets(self, surface: pygame.Surface) -> None:
+    def _draw_reaction_targets(self, surface: pygame.Surface) -> None:
         if self.stage_manager.state != StageState.COMBATE:
             return
 
-        active_targets = {}
+        active_rallies = {}
         for opportunity in self.rally_opportunities:
-            if (opportunity.time_left <= 0 or not opportunity.ally.is_alive()
-                    or not opportunity.enemy.is_alive()):
+            if opportunity.time_left <= 0 or not opportunity.ally.is_alive():
                 continue
-            active_targets[opportunity.enemy] = max(
-                active_targets.get(opportunity.enemy, 0.0),
+            active_rallies[opportunity.ally] = max(
+                active_rallies.get(opportunity.ally, 0.0),
                 opportunity.time_left
             )
 
-        for enemy, time_left in active_targets.items():
+        for ally, time_left in active_rallies.items():
             pygame.draw.rect(
                 surface,
                 config.COLOR_TEXT_GOLD,
-                enemy.rect.inflate(8, 8),
+                ally.rect.inflate(8, 8),
                 width=3,
                 border_radius=14
             )
@@ -193,8 +252,54 @@ class BattleScene(BaseScene):
                 True,
                 config.COLOR_TEXT_GOLD
             )
+            label_rect = label.get_rect(center=(ally.rect.centerx, ally.rect.top - 94))
+            surface.blit(label, label_rect)
+
+        active_criticals = {}
+        for opportunity in self.critical_opportunities:
+            if opportunity.time_left <= 0 or not opportunity.enemy.is_alive():
+                continue
+            active_criticals[opportunity.enemy] = max(
+                active_criticals.get(opportunity.enemy, 0.0),
+                opportunity.time_left
+            )
+
+        for enemy, time_left in active_criticals.items():
+            pygame.draw.rect(
+                surface,
+                config.COLOR_STATE_ATTACKING,
+                enemy.rect.inflate(8, 8),
+                width=3,
+                border_radius=14
+            )
+            label = self.game.font_small.render(
+                f"CRITICAL {time_left:.1f}s",
+                True,
+                config.COLOR_STATE_ATTACKING
+            )
             label_rect = label.get_rect(center=(enemy.rect.centerx, enemy.rect.top - 94))
             surface.blit(label, label_rect)
+
+    def _draw_reaction_status(self, surface: pygame.Surface) -> None:
+        if self.stage_manager.state != StageState.COMBATE:
+            return
+
+        if self.critical_cooldown_timer > 0:
+            message = (
+                f"Rally: clique no aliado ferido  |  "
+                f"Critical recarrega em {self.critical_cooldown_timer:.1f}s"
+            )
+            color = config.COLOR_TEXT_SECONDARY
+        else:
+            message = (
+                "Clique no aliado ferido: Rally  |  "
+                "Clique no inimigo atingido: Critical"
+            )
+            color = config.COLOR_TEXT_GOLD
+
+        label = self.game.font_small.render(message, True, color)
+        rect = label.get_rect(center=(config.SCREEN_WIDTH // 2, 100))
+        surface.blit(label, rect)
 
     def update(self, dt: float):
         # Atualiza textos flutuantes
@@ -213,7 +318,7 @@ class BattleScene(BaseScene):
 
         is_game_over = self.stage_manager.state in (StageState.JOGO_CONCLUIDO, StageState.DERROTA)
         is_transition = self.stage_manager.state in (StageState.TRANSICAO, StageState.FASE_CONCLUIDA)
-        self._update_rally_opportunities(dt, is_transition or is_game_over)
+        self._update_reaction_opportunities(dt, is_transition or is_game_over)
 
         # Atualiza movimentação/estado dos personagens
         for entidade in self.todas_entidades():
@@ -232,10 +337,20 @@ class BattleScene(BaseScene):
                         and damage_taken > 0 and target.is_alive()):
                     self.rally_opportunities.append(
                         RallyOpportunity(
-                            enemy=attacker,
+                            attacker=attacker,
                             ally=target,
                             damage_taken=damage_taken,
                             time_left=config.RALLY_WINDOW_SECONDS
+                        )
+                    )
+                elif (attacker.team == "aliado" and target.team == "inimigo"
+                      and damage_taken > 0 and target.is_alive()):
+                    self.critical_opportunities.append(
+                        CriticalOpportunity(
+                            attacker=attacker,
+                            enemy=target,
+                            damage_dealt=damage_taken,
+                            time_left=config.CRITICAL_WINDOW_SECONDS
                         )
                     )
                 attacker.reset_cooldown()
@@ -287,7 +402,8 @@ class BattleScene(BaseScene):
         for entidade in self.todas_entidades():
             entidade.draw(surface, self.game.font_bold, self.game.font_small)
 
-        self._draw_rally_targets(surface)
+        self._draw_reaction_targets(surface)
+        self._draw_reaction_status(surface)
 
         # Desenha Textos Flutuantes de Dano
         for ft in self.floating_texts:

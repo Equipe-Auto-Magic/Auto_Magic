@@ -26,14 +26,16 @@ com atributos definidos para o encontro.
 
 | Fase e sala | Inimigos |
 | --- | --- |
-| Floresta Sombria — Entrada da Floresta | Goblin Soldado (`Warrior`), Goblin Curandeiro (`Mage`) |
-| Floresta Sombria — Clareira dos Guardiões | Guarda Corrompido (`Warrior`), Invocador Noturno (`Mage`) |
-| Santuário Oculto — Ponte das Brumas | Cavaleiro Negro (`Warrior`), Feiticeiro Sombrio (`Mage`) |
-| Santuário Oculto — Câmara do Lorde Bruxo | Golem Protetor (`Warrior`), Lorde Bruxo (`Mage`) |
+| Floresta Sombria — Entrada da Floresta | Goblin Soldado (`Warrior`), Goblin Curandeiro (`Mage`), Goblin Batedor (`Warrior`) |
+| Floresta Sombria — Clareira dos Guardiões | Guarda Corrompido (`Warrior`), Invocador Noturno (`Mage`), Cão Corrompido (`Warrior`) |
+| Santuário Oculto — Ponte das Brumas | Cavaleiro Negro (`Warrior`), Feiticeiro Sombrio (`Mage`), Sentinela das Brumas (`Mage`) |
+| Santuário Oculto — Câmara do Lorde Bruxo | Golem Protetor (`Warrior`), Lorde Bruxo (`Mage`), Acólito do Lorde (`Mage`) |
 
-Os nomes indicam a identidade dos inimigos, mas não acrescentam habilidades próprias:
-por exemplo, o Goblin Curandeiro não cura e o Lorde Bruxo não tem mecânicas exclusivas
-de chefe no MVP.
+Cada sala combina inimigos corpo a corpo e à distância. As configurações também
+definem prioridades de alvo: linha de frente (alvo mais próximo), retaguarda (alvo
+mais distante) ou vulnerável (menor proporção de vida). Os nomes indicam identidade,
+mas não acrescentam habilidades próprias: o Goblin Curandeiro não cura e o Lorde
+Bruxo ainda não tem mecânicas exclusivas de chefe.
 
 ## Ciclo e interação
 
@@ -42,9 +44,12 @@ alcance, move-se em sua direção; ao alcançá-lo, para e prepara o ataque enqu
 recarga avança. Quando está pronto, a `BattleScene` aplica o dano. A unidade pode
 passar pelos estados **andando**, **preparando**, **atacando** e **morto**.
 
-Após um inimigo atingir um aliado, o jogador tem 1 segundo para clicar nesse inimigo
-e recuperar 50% do dano recente que ele causou. O Rally não ultrapassa a vida máxima,
-não revive aliados e destaca visualmente os inimigos com recuperação disponível.
+Após um inimigo atingir um aliado, o jogador tem 1 segundo para clicar no aliado
+ferido e recuperar 50% do dano recente recebido. O Rally não ultrapassa a vida
+máxima, não revive aliados e destaca visualmente o aliado com recuperação disponível.
+Após um aliado atingir um inimigo, o jogador tem 1 segundo para clicar nesse inimigo
+e ativar um Critical, adicionando 25% do dano do golpe recente. A ação tem recarga
+global de 5 segundos e destaca os inimigos com uma janela ativa.
 
 O `StageManager` monta cada sala e configura as equipes oponentes; a `BattleScene`
 atualiza e desenha as entidades e coordena os ataques. A morte de um aliado ativa

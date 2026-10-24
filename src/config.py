@@ -66,8 +66,11 @@ COLOR_BUTTON_BORDER_HOVER = (100, 140, 210)
 # Configurações de Gameplay
 ATTACK_COOLDOWN_DEFAULT = 1.5      # Segundos entre cada ataque
 RESULT_SCREEN_DELAY = 3.0          # Segundos para retornar ao menu após o fim da batalha
-RALLY_WINDOW_SECONDS = 1.0         # Tempo para clicar no inimigo após receber um golpe
+RALLY_WINDOW_SECONDS = 1.0         # Tempo para clicar no aliado após receber um golpe
 RALLY_RECOVERY_RATIO = 0.5         # Fração do dano recente recuperada no Rally
+CRITICAL_WINDOW_SECONDS = 1.0      # Tempo para reagir após um ataque aliado
+CRITICAL_DAMAGE_MULTIPLIER = 1.25
+CRITICAL_COOLDOWN_SECONDS = 5.0    # Recarga global entre acertos críticos
 
 # Configurações de Movimentação e Alcance
 # Guerreiro

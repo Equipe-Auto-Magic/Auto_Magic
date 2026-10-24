@@ -27,19 +27,21 @@
 ### 2.3 Fase de Batalha (Combate Automático)
 
 * A arena carrega o cenário correspondente à fase `[Música: Tema da Região]`.
-* Aliados e inimigos identificam alvos vivos por proximidade.
+* Cada unidade identifica alvos vivos; os inimigos podem priorizar proximidade, retaguarda ou vulnerabilidade.
 * Unidades corpo a corpo deslocam-se `[Animação: Andar]` até o alcance de ataque; unidades de longo alcance disparam de posições seguras.
 * Ao atingir o alcance, a unidade aguarda o tempo de recarga `[UI: Barra de Cooldown]` para desferir o golpe `[Animação: Ataque / Lançamento de Magia]` `[som: ataque físico ou magia]`.
 * O alvo atingido sofre impacto `[Animação: Dano / Impacto]` `[som: receber dano]`, exibindo um indicador numérico flutuante `[UI: Números de Dano]`.
 * A vida das unidades é acompanhada em tempo real por barras dedicadas `[UI: Barra de Vida]`.
-* Quando um aliado é derrotado `[Animação: Morte]` `[som: morte de aliado]`, os sobreviventes entram em **Fúria** `[Efeito Visual: Aura Vermelha nos Heróis]` `[som: ativação de fúria]`, recebendo um bônus temporário de dano.
-* Quando um inimigo é abatido `[Animação: Morte]` `[som: morte de inimigo]`, ele desaparece da arena.
+* Após um aliado receber dano, o jogador pode clicar nele em até 1 segundo para ativar **Rally**, recuperando 50% do dano recente sem exceder a vida máxima.
+* Após um aliado atingir um inimigo, o jogador pode clicar nesse inimigo em até 1 segundo para ativar **Critical**, adicionando 25% do dano do golpe. A ação tem recarga global de 5 segundos.
+* Quando um aliado é derrotado `[Animação: Morte]` `[som: morte de aliado]`, os sobreviventes entram em **Fúria** `[Efeito Visual: Aura Vermelha nos Heróis]` `[som: ativação de fúria]`, recebendo um bônus de 25% no dano.
+* Quando um inimigo é abatido `[Animação: Morte]` `[som: morte de inimigo]`, ele fica fora de combate.
 
 ### 2.4 Progressão de Salas e Transições
 
 * Derrotar todos os inimigos da sala conclui o encontro `[som: vitória na sala]`.
 * A equipe avança para a próxima sala **mantendo a vida restante** do combate anterior.
-* O ciclo de preparação e combate se repete pelas campanha. Exemplo: de cenários:
+* O ciclo de preparação e combate se repete pelas quatro salas da campanha, com três inimigos em cada encontro:
 1. **Floresta Sombria** `[Música: Tema da Floresta]` — Entrada da Floresta e Clareira dos Guardiões (Goblins e Guardas Corrompidos).
 2. **Santuário Oculto** `[Música: Tema do Santuário]` — Ponte das Brumas e Câmara do Lorde Bruxo (Guardiões e o Boss Lorde Bruxo).
 
@@ -80,6 +82,7 @@
 * Barras de Vida e Barras de Cooldown dinâmicas.
 * Números flutuantes de dano.
 * Indicadores de estado e alvos.
+* Destaques e contadores das janelas de Rally e Critical.
 * Efeito visual de Fúria (Aura de luz vermelha nos sobreviventes).
 * Partículas e projéteis mágicos.
 
@@ -111,7 +114,8 @@
 ### 💻 Programação
 
 * Gerenciador de Estados da Aplicação (Abertura ➔ História ➔ Preparação ➔ Batalha ➔ Pausa ➔ Resultado).
-* Sistema de IA para aquisição automática de alvos baseada em proximidade.
+* Sistema de IA para aquisição automática de alvos por proximidade, retaguarda ou vulnerabilidade.
+* Janelas temporizadas de Rally e Critical com recarga global para Critical.
 * Máquina de estados das unidades de combate (Movimento, Recarga, Ataque, Morte).
 * Sistema de persistência de HP entre as salas da campanha.
 * Sistema de gatilho para o estado de Fúria (ao perder um aliado).
@@ -128,7 +132,9 @@
 
 * **Fluxo Principal:** Menu inicial funcional com botões de jogar e sair, além de transições de telas e condições de vitória/derrota.
 * **Combate Automático:** Lógica de movimento, verificação de alcance, temporizadores de recarga, cálculo de dano e fim de rodada.
-* **Escopo Inicial:** Equipe fixa composta por **1 Herói** (corpo a corpo) e **1 Mago** (longo alcance), combatendo ondas de inimigos configurados por sala ao longo de 2 fases.
+* **Reações Manuais:** Rally ao clicar no aliado ferido (50% do dano recente em até 1 segundo) e Critical ao clicar no inimigo atingido (bônus de 25%, janela de 1 segundo e recarga global de 5 segundos).
+* **Escopo Inicial:** Equipe fixa composta por **1 Herói** (corpo a corpo) e **1 Mago** (longo alcance), combatendo três inimigos por sala ao longo de 2 fases.
+* **Alvos dos Inimigos:** Preferência configurável por linha de frente, retaguarda ou aliado com menor proporção de vida.
 * **Interface Básica:** Fundos de cenário, painéis de UI e indicadores de combate em funcionamento (utilizando formas geométricas provisórias para os personagens).
 
 ### ⏳ Pendente para a Versão Final (Backlog):
@@ -136,4 +142,4 @@
 * **Substituição de Assets Visuais:** Trocar as formas geométricas atuais pelos *spritesheets* definitivos e animações dos heróis e inimigos.
 * **Motor de Áudio:** Conectar os arquivos de música e efeitos sonoros descritos na lista de som.
 * **Tela de Preparação Avançada:** Desenvolver a interface interativa de seleção de elenco e posicionamento estratégico antes das batalhas.
-* **Mecânicas Complementares:** Ativação visual e sonora da *Fúria* e persistência oficial da barra de vida entre as salas.
+* **Mecânicas Complementares:** Seleção e posicionamento da equipe, pausa, integração de sprites e áudio, além de mecânicas exclusivas para o Lorde Bruxo.

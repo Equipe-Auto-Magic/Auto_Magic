@@ -25,12 +25,17 @@ enxuto: usa um Herói e um Mago fixos, sem seleção de elenco ou tela de prepar
 
 - Menu principal com os botões **Jogar** e **Sair**.
 - Combate automático entre dois aliados fixos e os inimigos de cada sala.
-- Seleção automática do adversário vivo mais próximo; unidades se movimentam até
-  ficarem ao alcance e atacam ao completar a recarga.
-- Mecânica Rally: após receber um golpe, clique no inimigo que o causou em até
-  um segundo para recuperar 50% do dano recente causado por ele.
+- Inimigos corpo a corpo e de longo alcance podem priorizar a linha de frente, a
+  retaguarda ou o aliado com menor proporção de vida.
+- Rally: após um aliado receber dano, clique nele em até um segundo para recuperar
+  50% do dano recente, sem exceder a vida máxima.
+- Critical: após um aliado atingir um inimigo, clique nesse inimigo em até um
+  segundo para aplicar um bônus de dano de 25%. Há uma recarga global de cinco
+  segundos entre Criticals.
 - Indicadores de vida, dano, recarga e estado, além de números flutuantes de dano e
   feedback visual para ataque, dano e derrota.
+- Cada sala tem três inimigos, combinando combatentes corpo a corpo e de longo
+  alcance.
 - Duas fases com duas salas cada: Floresta Sombria e Santuário Oculto.
 - A vida dos aliados persiste entre as salas; quando um aliado cai, os sobreviventes
   recebem um aumento de 25% no dano.
@@ -48,15 +53,15 @@ fluxo jogável atual.
 
 | Região | Sala | Inimigos |
 | --- | --- | --- |
-| Floresta Sombria | Entrada da Floresta | Goblin Soldado e Goblin Curandeiro |
-| Floresta Sombria | Clareira dos Guardiões | Guarda Corrompido e Invocador Noturno |
-| Santuário Oculto | Ponte das Brumas | Cavaleiro Negro e Feiticeiro Sombrio |
-| Santuário Oculto | Câmara do Lorde Bruxo | Golem Protetor e Lorde Bruxo |
+| Floresta Sombria | Entrada da Floresta | Goblin Soldado, Goblin Curandeiro e Goblin Batedor |
+| Floresta Sombria | Clareira dos Guardiões | Guarda Corrompido, Invocador Noturno e Cão Corrompido |
+| Santuário Oculto | Ponte das Brumas | Cavaleiro Negro, Feiticeiro Sombrio e Sentinela das Brumas |
+| Santuário Oculto | Câmara do Lorde Bruxo | Golem Protetor, Lorde Bruxo e Acólito do Lorde |
 
-Os inimigos usam arquétipos de combate corpo a corpo ou à distância. Na configuração
-atual, o Goblin Curandeiro não cura, e o Lorde Bruxo não possui uma mecânica de chefe
-exclusiva; ambos atacam segundo os parâmetros de suas classes. Diferenciar esses
-papéis é parte do refinamento previsto para os encontros.
+Os inimigos usam arquétipos de combate corpo a corpo ou à distância e podem escolher
+alvos por proximidade, retaguarda ou vulnerabilidade. O Goblin Curandeiro não cura,
+e o Lorde Bruxo ainda não possui uma mecânica exclusiva de chefe; ambos atacam
+segundo os parâmetros de suas classes.
 
 ## Executar
 
@@ -83,7 +88,7 @@ No Windows, também é possível iniciar com `run.bat`.
 │   │   └── Componentes.md
 │   ├── entidades/
 │   │   ├── Apresentacao_Entidades_Auto_Magic.pdf
-│   │   └── Entidades_Consolidado.md
+│   │   └── Entidades.md
 │   └── sgdd/
 │       └── SGDD_Auto_Magic.md
 └── src/
@@ -101,7 +106,7 @@ No Windows, também é possível iniciar com `run.bat`.
 
 - [SGDD — Auto Magic](docs/sgdd/SGDD_Auto_Magic.md): visão e fluxo planejado do jogo.
 - [Componentes do jogo](docs/componentes/Componentes.md): responsabilidades dos componentes e sua interação no combate.
-- [Entidades do jogo](docs/entidades/Entidades_Consolidado.md): perfis, comportamento e inimigos do MVP.
+- [Entidades do jogo](docs/entidades/Entidades.md): perfis, comportamento e inimigos do MVP.
 - [Apresentação das entidades](docs/entidades/Apresentacao_Entidades_Auto_Magic.pdf): visão visual dos combatentes e de seu ciclo de comportamento.
 - `src/stage_data.py`: configuração das fases, salas e inimigos.
 - `src/entity.py`: entidades e componentes de vida, movimento, combate e apresentação.

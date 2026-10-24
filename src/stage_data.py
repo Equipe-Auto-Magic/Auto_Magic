@@ -31,6 +31,7 @@ class EnemyConfig:
     offset_y: int = 0
     speed: Optional[float] = None
     attack_range: Optional[float] = None
+    target_preference: str = "nearest"
 
 
 @dataclass
@@ -77,7 +78,7 @@ class EnemyFactory:
         inimigo.add_component(HealthComponent(max_hp=cfg.max_hp))
         inimigo.add_component(MovementComponent(speed=speed, default_direction=-1.0))
         inimigo.add_component(CombatComponent(dano=cfg.attack_damage, alcance=attack_range, cooldown=cfg.attack_cooldown))
-        inimigo.add_component(TargetingComponent())
+        inimigo.add_component(TargetingComponent(target_preference=cfg.target_preference))
         inimigo.add_component(SpriteComponent(width=100, height=140, color=config.COLOR_ENEMY, shadow_color=config.COLOR_ENEMY_SHADOW))
 
         return inimigo
@@ -104,7 +105,8 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=42,
                             attack_damage=6,
                             offset_x=0,
-                            offset_y=0
+                            offset_y=0,
+                            target_preference="frontline",
                         ),
                         EnemyConfig(
                             name="Goblin Curandeiro",
@@ -112,8 +114,19 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=28,
                             attack_damage=5,
                             attack_cooldown=2.4,
-                            offset_x=120,
-                            offset_y=0
+                            offset_x=-120,
+                            offset_y=-25,
+                            target_preference="backline",
+                        ),
+                        EnemyConfig(
+                            name="Goblin Batedor",
+                            unit_class="Warrior",
+                            max_hp=34,
+                            attack_damage=5,
+                            attack_cooldown=1.8,
+                            offset_x=-240,
+                            offset_y=25,
+                            target_preference="vulnerable",
                         ),
                     ]
                 ),
@@ -127,7 +140,8 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=58,
                             attack_damage=9,
                             offset_x=0,
-                            offset_y=-10
+                            offset_y=-10,
+                            target_preference="frontline",
                         ),
                         EnemyConfig(
                             name="Invocador Noturno",
@@ -135,8 +149,19 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=40,
                             attack_damage=7,
                             attack_cooldown=2.2,
-                            offset_x=130,
-                            offset_y=10
+                            offset_x=-120,
+                            offset_y=10,
+                            target_preference="backline",
+                        ),
+                        EnemyConfig(
+                            name="Cão Corrompido",
+                            unit_class="Warrior",
+                            max_hp=46,
+                            attack_damage=8,
+                            attack_cooldown=1.7,
+                            offset_x=-240,
+                            offset_y=25,
+                            target_preference="vulnerable",
                         ),
                     ]
                 )
@@ -155,8 +180,9 @@ def get_default_stages() -> List[StageConfig]:
                             unit_class="Warrior",
                             max_hp=74,
                             attack_damage=11,
-                            offset_x=-20,
-                            offset_y=0
+                            offset_x=0,
+                            offset_y=0,
+                            target_preference="frontline",
                         ),
                         EnemyConfig(
                             name="Feiticeiro Sombrio",
@@ -164,8 +190,19 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=48,
                             attack_damage=8,
                             attack_cooldown=2.0,
-                            offset_x=110,
-                            offset_y=-15
+                            offset_x=-120,
+                            offset_y=-25,
+                            target_preference="backline",
+                        ),
+                        EnemyConfig(
+                            name="Sentinela das Brumas",
+                            unit_class="Mage",
+                            max_hp=52,
+                            attack_damage=9,
+                            attack_cooldown=2.1,
+                            offset_x=-240,
+                            offset_y=25,
+                            target_preference="vulnerable",
                         ),
                     ]
                 ),
@@ -178,8 +215,9 @@ def get_default_stages() -> List[StageConfig]:
                             unit_class="Warrior",
                             max_hp=92,
                             attack_damage=12,
-                            offset_x=-30,
-                            offset_y=0
+                            offset_x=0,
+                            offset_y=0,
+                            target_preference="frontline",
                         ),
                         EnemyConfig(
                             name="Lorde Bruxo",
@@ -187,8 +225,19 @@ def get_default_stages() -> List[StageConfig]:
                             max_hp=76,
                             attack_damage=10,
                             attack_cooldown=1.9,
-                            offset_x=120,
-                            offset_y=0
+                            offset_x=-120,
+                            offset_y=-25,
+                            target_preference="backline",
+                        ),
+                        EnemyConfig(
+                            name="Acólito do Lorde",
+                            unit_class="Mage",
+                            max_hp=60,
+                            attack_damage=10,
+                            attack_cooldown=2.0,
+                            offset_x=-240,
+                            offset_y=25,
+                            target_preference="vulnerable",
                         ),
                     ]
                 )
