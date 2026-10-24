@@ -225,19 +225,14 @@ class Entity:
         health = self.get_component(HealthComponent)
         return health.is_alive() if health else False
 
-    def take_damage(self, amount: int) -> int:
-        """Aplica dano e retorna a quantidade efetivamente removida da vida."""
+    def take_damage(self, amount: int) -> None:
+        """Encaminha o recebimento de dano para o HealthComponent e feedback de flash."""
         health = self.get_component(HealthComponent)
-        damage_taken = health.take_damage(amount) if health else 0
+        if health:
+            health.take_damage(amount)
         sprite = self.get_component(SpriteComponent)
-        if sprite and damage_taken > 0:
+        if sprite:
             sprite.trigger_damage_flash()
-        return damage_taken
-
-    def heal(self, amount: int) -> int:
-        """Recupera vida sem ultrapassar o máximo e retorna o valor efetivo."""
-        health = self.get_component(HealthComponent)
-        return health.heal(amount) if health else 0
 
     def can_attack(self) -> bool:
         """Verifica disponibilidade de ataque via CombatComponent."""
@@ -328,26 +323,16 @@ class HealthComponent(Component):
     def is_alive(self) -> bool:
         return self.current_hp > 0 and self.state != EntityState.MORTO
 
-    def take_damage(self, amount: int) -> int:
+    def take_damage(self, amount: int) -> None:
         if not self.is_alive():
-            return 0
+            return
 
-        damage_taken = min(max(0, amount), self.current_hp)
-        self.current_hp -= damage_taken
+        self.current_hp = max(0, self.current_hp - amount)
         if self.current_hp <= 0:
             self.state = EntityState.MORTO
             if self.entity is not None:
                 # Gatilho de Evento (Emissor): notifica a morte da entidade dona
                 gerenciador_eventos.notificar("entidade_morta", self.entity)
-        return damage_taken
-
-    def heal(self, amount: int) -> int:
-        if not self.is_alive() or amount <= 0:
-            return 0
-
-        amount_recovered = min(amount, self.max_hp - self.current_hp)
-        self.current_hp += amount_recovered
-        return amount_recovered
 
     def get_hp_percentage(self) -> float:
         if self.max_hp <= 0:

@@ -53,7 +53,7 @@ class BuffDeFuria(Observador):
     """
     Habilidade Passiva baseada no padrão Observer:
     Quando uma entidade do time Aliado morre, aumenta o dano de todos os
-    aliados vivos restantes em 25% (efeito de fúria/vingança).
+    aliados vivos restantes em 50% (efeito de fúria/vingança).
     """
 
     def __init__(self, time_aliados: list, cena_batalha=None):

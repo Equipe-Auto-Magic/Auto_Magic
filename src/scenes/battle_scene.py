@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import pygame
 from src import config
 from src.entity import (
@@ -16,14 +15,6 @@ from src.entity import (
 from src.scenes.base_scene import BaseScene
 from src.events import gerenciador_eventos, BuffDeFuria
 from src.stage_manager import StageManager, StageState
-
-
-@dataclass
-class RallyOpportunity:
-    enemy: Entity
-    ally: Entity
-    damage_taken: int
-    time_left: float
 
 
 class FloatingText:
@@ -58,12 +49,11 @@ class BattleScene(BaseScene):
         # --- Sistema de Grupos / Times (Facções) ---
         self.time_aliados = []
         self.time_inimigos = []
-        self.rally_opportunities = []
 
         # 1. Aliados são criados uma ÚNICA vez no início da batalha usando o Padrão de Componentes
         self.hero = Entity(name="Herói", team="aliado")
         self.hero.add_component(TransformComponent(x=hero_x, y=ground_y, width=100, height=140))
-        self.hero.add_component(HealthComponent(max_hp=240))
+        self.hero.add_component(HealthComponent(max_hp=1110))
         self.hero.add_component(MovementComponent(speed=config.WARRIOR_SPEED, default_direction=1.0))
         self.hero.add_component(CombatComponent(dano=18, alcance=config.WARRIOR_ATTACK_RANGE, cooldown=config.ATTACK_COOLDOWN_DEFAULT))
         self.hero.add_component(TargetingComponent())
@@ -71,7 +61,7 @@ class BattleScene(BaseScene):
 
         self.mage = Entity(name="Mago", team="aliado")
         self.mage.add_component(TransformComponent(x=mage_x, y=ground_y, width=100, height=140))
-        self.mage.add_component(HealthComponent(max_hp=80))
+        self.mage.add_component(HealthComponent(max_hp=30))
         self.mage.add_component(MovementComponent(speed=config.MAGE_SPEED, default_direction=1.0))
         self.mage.add_component(CombatComponent(dano=12, alcance=config.MAGE_ATTACK_RANGE, cooldown=2.0))
         self.mage.add_component(TargetingComponent())
@@ -106,95 +96,6 @@ class BattleScene(BaseScene):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             from src.scenes.menu_scene import MenuScene
             self.game.change_scene(MenuScene(self.game))
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self._try_rally(event.pos)
-
-    def _try_rally(self, position: tuple[int, int]) -> None:
-        if self.stage_manager.state != StageState.COMBATE:
-            return
-
-        enemy = next(
-            (enemy for enemy in reversed(self.time_inimigos)
-             if enemy.is_alive() and enemy.rect.collidepoint(position)),
-            None
-        )
-        if enemy is None:
-            return
-
-        opportunities = [
-            opportunity for opportunity in self.rally_opportunities
-            if opportunity.enemy is enemy and opportunity.time_left > 0
-        ]
-        if not opportunities:
-            return
-
-        self.rally_opportunities = [
-            opportunity for opportunity in self.rally_opportunities
-            if opportunity.enemy is not enemy
-        ]
-        damage_by_ally = {}
-        for opportunity in opportunities:
-            if opportunity.ally.is_alive():
-                damage_by_ally[opportunity.ally] = (
-                    damage_by_ally.get(opportunity.ally, 0) + opportunity.damage_taken
-                )
-
-        for ally, damage_taken in damage_by_ally.items():
-            recovery = int(damage_taken * config.RALLY_RECOVERY_RATIO)
-            amount_recovered = ally.heal(recovery)
-            if amount_recovered > 0:
-                self.floating_texts.append(
-                    FloatingText(
-                        f"RALLY +{amount_recovered}",
-                        int(ally.x) + 10,
-                        int(ally.y) - 40,
-                        config.COLOR_TEXT_GOLD
-                    )
-                )
-
-    def _update_rally_opportunities(self, dt: float, paused: bool) -> None:
-        if paused:
-            self.rally_opportunities.clear()
-            return
-
-        for opportunity in self.rally_opportunities:
-            opportunity.time_left -= dt
-        self.rally_opportunities = [
-            opportunity for opportunity in self.rally_opportunities
-            if opportunity.time_left > 0
-            and opportunity.ally.is_alive()
-            and opportunity.enemy.is_alive()
-        ]
-
-    def _draw_rally_targets(self, surface: pygame.Surface) -> None:
-        if self.stage_manager.state != StageState.COMBATE:
-            return
-
-        active_targets = {}
-        for opportunity in self.rally_opportunities:
-            if (opportunity.time_left <= 0 or not opportunity.ally.is_alive()
-                    or not opportunity.enemy.is_alive()):
-                continue
-            active_targets[opportunity.enemy] = max(
-                active_targets.get(opportunity.enemy, 0.0),
-                opportunity.time_left
-            )
-
-        for enemy, time_left in active_targets.items():
-            pygame.draw.rect(
-                surface,
-                config.COLOR_TEXT_GOLD,
-                enemy.rect.inflate(8, 8),
-                width=3,
-                border_radius=14
-            )
-            label = self.game.font_small.render(
-                f"RALLY {time_left:.1f}s",
-                True,
-                config.COLOR_TEXT_GOLD
-            )
-            label_rect = label.get_rect(center=(enemy.rect.centerx, enemy.rect.top - 94))
-            surface.blit(label, label_rect)
 
     def update(self, dt: float):
         # Atualiza textos flutuantes
@@ -213,7 +114,6 @@ class BattleScene(BaseScene):
 
         is_game_over = self.stage_manager.state in (StageState.JOGO_CONCLUIDO, StageState.DERROTA)
         is_transition = self.stage_manager.state in (StageState.TRANSICAO, StageState.FASE_CONCLUIDA)
-        self._update_rally_opportunities(dt, is_transition or is_game_over)
 
         # Atualiza movimentação/estado dos personagens
         for entidade in self.todas_entidades():
@@ -227,17 +127,7 @@ class BattleScene(BaseScene):
         for attacker in self.todas_entidades():
             if attacker.can_attack() and attacker.target is not None and attacker.target.is_alive():
                 target = attacker.target
-                damage_taken = target.take_damage(attacker.attack_damage)
-                if (attacker.team == "inimigo" and target.team == "aliado"
-                        and damage_taken > 0 and target.is_alive()):
-                    self.rally_opportunities.append(
-                        RallyOpportunity(
-                            enemy=attacker,
-                            ally=target,
-                            damage_taken=damage_taken,
-                            time_left=config.RALLY_WINDOW_SECONDS
-                        )
-                    )
+                target.take_damage(attacker.attack_damage)
                 attacker.reset_cooldown()
                 attacker.trigger_attack_feedback()
 
@@ -286,8 +176,6 @@ class BattleScene(BaseScene):
         # Desenha autonomamente todas as Entidades
         for entidade in self.todas_entidades():
             entidade.draw(surface, self.game.font_bold, self.game.font_small)
-
-        self._draw_rally_targets(surface)
 
         # Desenha Textos Flutuantes de Dano
         for ft in self.floating_texts:

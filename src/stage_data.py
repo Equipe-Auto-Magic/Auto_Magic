@@ -101,17 +101,17 @@ def get_default_stages() -> List[StageConfig]:
                         EnemyConfig(
                             name="Goblin Soldado",
                             unit_class="Warrior",
-                            max_hp=42,
-                            attack_damage=6,
+                            max_hp=45,
+                            attack_damage=8,
                             offset_x=0,
                             offset_y=0
                         ),
                         EnemyConfig(
                             name="Goblin Curandeiro",
                             unit_class="Mage",
-                            max_hp=28,
-                            attack_damage=5,
-                            attack_cooldown=2.4,
+                            max_hp=30,
+                            attack_damage=6,
+                            attack_cooldown=2.2,
                             offset_x=120,
                             offset_y=0
                         ),
@@ -124,17 +124,17 @@ def get_default_stages() -> List[StageConfig]:
                         EnemyConfig(
                             name="Guarda Corrompido",
                             unit_class="Warrior",
-                            max_hp=58,
-                            attack_damage=9,
+                            max_hp=65,
+                            attack_damage=12,
                             offset_x=0,
                             offset_y=-10
                         ),
                         EnemyConfig(
                             name="Invocador Noturno",
                             unit_class="Mage",
-                            max_hp=40,
-                            attack_damage=7,
-                            attack_cooldown=2.2,
+                            max_hp=45,
+                            attack_damage=10,
+                            attack_cooldown=2.0,
                             offset_x=130,
                             offset_y=10
                         ),
@@ -153,17 +153,17 @@ def get_default_stages() -> List[StageConfig]:
                         EnemyConfig(
                             name="Cavaleiro Negro",
                             unit_class="Warrior",
-                            max_hp=74,
-                            attack_damage=11,
+                            max_hp=85,
+                            attack_damage=14,
                             offset_x=-20,
                             offset_y=0
                         ),
                         EnemyConfig(
                             name="Feiticeiro Sombrio",
                             unit_class="Mage",
-                            max_hp=48,
-                            attack_damage=8,
-                            attack_cooldown=2.0,
+                            max_hp=50,
+                            attack_damage=12,
+                            attack_cooldown=1.8,
                             offset_x=110,
                             offset_y=-15
                         ),
@@ -176,17 +176,17 @@ def get_default_stages() -> List[StageConfig]:
                         EnemyConfig(
                             name="Golem Protetor",
                             unit_class="Warrior",
-                            max_hp=92,
-                            attack_damage=12,
+                            max_hp=110,
+                            attack_damage=16,
                             offset_x=-30,
                             offset_y=0
                         ),
                         EnemyConfig(
                             name="Lorde Bruxo",
                             unit_class="Mage",
-                            max_hp=76,
-                            attack_damage=10,
-                            attack_cooldown=1.9,
+                            max_hp=95,
+                            attack_damage=15,
+                            attack_cooldown=1.7,
                             offset_x=120,
                             offset_y=0
                         ),
