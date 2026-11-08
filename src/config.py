@@ -16,6 +16,33 @@ BACKGROUND_IMAGES = [
     str(BACKGROUND_DIR / "bg-floresta-magica.png"),
     str(BACKGROUND_DIR / "bg-floresta-outono.png"),
 ]
+CHARACTER_DIR = ASSETS_DIR / "images" / "Characters"
+DUELIST_SPRITE_PATH = CHARACTER_DIR / "PC - Duelist.png"
+DUELIST_FRAME_SIZE = (50, 48)
+DUELIST_ANIMATIONS = {
+    "hurt": [21],
+}
+DUELIST_ANIMATION_RECTS = {
+    "idle": [(141, 156, 40, 46), (183, 156, 38, 46)],
+    "attack": [
+        (205, 0, 40, 57),
+        (148, 0, 54, 57),
+        (101, 0, 34, 57),
+        (63, 0, 36, 57),
+        (0, 0, 56, 57),
+    ],
+    "walk": [
+        (110, 156, 30, 45),
+        (70, 156, 37, 45),
+        (37, 156, 31, 45),
+        (0, 156, 35, 45),
+    ],
+    "death": [
+        (164, 64, 38, 41),
+        (157, 123, 46, 30),
+    ],
+}
+DUELIST_ANIMATION_FPS = 10
 WINDOW_TITLE = "Auto-Magic: Auto Battler RPG (MVP)"
 FPS = 60
 STAGE_TRANSITION_DELAY = 2.0        # Segundos de transição entre salas
@@ -42,6 +69,7 @@ COLOR_STATE_PREPARING = (241, 196, 15)     # Amarelo (Carregando golpe/cooldown 
 COLOR_STATE_ATTACKING = (235, 87, 87)      # Vermelho (Instante do ataque / dano)
 COLOR_STATE_ATTACK_FLASH = (255, 255, 255) # Flash branco no ataque
 COLOR_STATE_DEAD = (128, 128, 128)         # Cinza (Fora de combate)
+COLOR_RALLY_NEON = (57, 255, 20)
 
 # Cores da Interface e Barras de HP
 COLOR_HP_HIGH = (46, 204, 113)     # Verde

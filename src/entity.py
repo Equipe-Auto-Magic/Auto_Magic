@@ -3,7 +3,8 @@ Módulo de Entidades e Componentes do Auto-Battler.
 Implementa o Padrão de Componentes com Máquina de Estados e Feedback Visual por Cores.
 A classe Entity atua puramente como contêiner modular de componentes.
 """
-from typing import Dict, Type, TypeVar, Optional, Any, List
+from pathlib import Path
+from typing import Dict, Type, TypeVar, Optional, Any, List, Union
 import pygame
 from src import config
 from src.events import gerenciador_eventos
@@ -14,7 +15,7 @@ T = TypeVar('T', bound='Component')
 class EntityState:
     """
     Constantes dos Estados da Entidade (Máquina de Estados).
-    Facilita a transição para animações com spritesheets no futuro.
+    Também orienta a seleção de animações do SpriteComponent.
     """
     ANDANDO = "ANDANDO"         # Movendo-se até alcançar o range
     PREPARANDO = "PREPARANDO"   # No alcance, aguardando o timer/cooldown do ataque recarregar
@@ -571,19 +572,16 @@ class TargetingComponent(Component):
 class SpriteComponent(Component):
     """
     Componente visual e de renderização (Render/SpriteComponent).
-    Implementa Feedback Visual por Cores de acordo com a Máquina de Estados:
-    - ANDANDO: Azul (Aliados) / Laranja (Inimigos)
-    - PREPARANDO: Amarelo (carregando próximo golpe no range)
-    - ATACANDO: Vermelho / Flash Branco por 0.1s (instante exato do dano)
-    - MORTO: Cinza com 50% de opacidade (Alpha 128)
-
-    Arquitetura Pronta para Animações:
-    O método update_visual_state() isola a escolha do estado visual.
-    No futuro, basta substituir a atribuição de cor por chamadas como
-    set_animation('walk'), set_animation('idle') ou set_animation('attack').
+    Pode desenhar formas coloridas ou animar quadros de um sprite sheet.
+    Mantém os indicadores de estado, vida, recarga e dano da entidade.
     """
     def __init__(self, width: int = 100, height: int = 140,
-                 color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW):
+                 color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW,
+                 sprite_sheet_path: Optional[Union[str, Path]] = None,
+                 frame_size: tuple[int, int] = (50, 48),
+                 animations: Optional[Dict[str, List[int]]] = None,
+                 animation_rects: Optional[Dict[str, List[tuple[int, int, int, int]]]] = None,
+                 animation_fps: int = 10):
         super().__init__()
         self.width: int = width
         self.height: int = height
@@ -597,23 +595,153 @@ class SpriteComponent(Component):
         self.current_alpha: int = 255
         self.shake_offset_x: int = 0
         self.shake_offset_y: int = 0
+        self.animations: Dict[str, List[pygame.Surface]] = {}
+        self.animation_fps = animation_fps
+        self.animation_name: Optional[str] = None
+        self.animation_frame = 0
+        self.animation_timer = 0.0
+        self.animation_finished = False
+        self._animation_loops = True
+
+        if sprite_sheet_path is not None:
+            self.animations = self._load_animations(
+                sprite_sheet_path,
+                frame_size,
+                animations or {},
+                animation_rects or {},
+            )
+            self.set_animation("idle")
+
+    @staticmethod
+    def _load_animations(
+        sprite_sheet_path: Union[str, Path],
+        frame_size: tuple[int, int],
+        animations: Dict[str, List[int]],
+        animation_rects: Dict[str, List[tuple[int, int, int, int]]],
+    ) -> Dict[str, List[pygame.Surface]]:
+        sheet = pygame.image.load(str(sprite_sheet_path))
+        sheet.set_colorkey(sheet.get_at((0, 0)))
+        frame_width, frame_height = frame_size
+        columns = sheet.get_width() // frame_width
+        rows = sheet.get_height() // frame_height
+        frame_count = columns * rows
+        loaded: Dict[str, List[pygame.Surface]] = {}
+
+        for animation_name, frame_indices in animations.items():
+            frames = []
+            for frame_index in frame_indices:
+                if frame_index < 0 or frame_index >= frame_count:
+                    raise ValueError(
+                        f"Frame {frame_index} is outside the sprite sheet "
+                        f"for animation {animation_name!r}"
+                    )
+                source_rect = pygame.Rect(
+                    (frame_index % columns) * frame_width,
+                    (frame_index // columns) * frame_height,
+                    frame_width,
+                    frame_height,
+                )
+                frames.append(sheet.subsurface(source_rect).copy())
+            loaded[animation_name] = frames
+
+        for animation_name, frame_rects in animation_rects.items():
+            frames = []
+            for frame_rect in frame_rects:
+                source_rect = pygame.Rect(frame_rect)
+                if not sheet.get_rect().contains(source_rect):
+                    raise ValueError(
+                        f"Frame rectangle {tuple(frame_rect)} is outside the sprite sheet "
+                        f"for animation {animation_name!r}"
+                    )
+                frames.append(sheet.subsurface(source_rect).copy())
+            loaded[animation_name] = frames
+
+        return loaded
+
+    def set_animation(self, animation_name: str, loop: bool = True) -> None:
+        if animation_name not in self.animations:
+            return
+        if self.animation_name == animation_name:
+            return
+
+        self.animation_name = animation_name
+        self.animation_frame = 0
+        self.animation_timer = 0.0
+        self.animation_finished = False
+        self._animation_loops = loop
+
+    def _select_animation(self) -> None:
+        if not self.entity or not self.animations:
+            return
+
+        if self.entity.state == EntityState.MORTO:
+            animation_name, loop = "death", False
+        elif self.attack_feedback_timer > 0 or self.entity.state == EntityState.ATACANDO:
+            animation_name, loop = "attack", False
+        elif self.flash_timer > 0:
+            animation_name, loop = "hurt", False
+        elif self.entity.state == EntityState.ANDANDO:
+            animation_name, loop = "walk", True
+        else:
+            animation_name, loop = "idle", True
+
+        if (
+            self.animation_name in ("attack", "hurt", "death")
+            and not self.animation_finished
+        ):
+            return
+        self.set_animation(animation_name, loop=loop)
+
+    def _advance_animation(self, dt: float) -> None:
+        if not self.animation_name or self.animation_fps <= 0 or self.animation_finished:
+            return
+        frames = self.animations[self.animation_name]
+        if not frames or (len(frames) == 1 and self._animation_loops):
+            return
+
+        self.animation_timer += dt
+        frame_duration = 1.0 / self.animation_fps
+        while self.animation_timer >= frame_duration:
+            self.animation_timer -= frame_duration
+            if self.animation_frame + 1 < len(frames):
+                self.animation_frame += 1
+            elif self._animation_loops:
+                self.animation_frame = 0
+            else:
+                self.animation_finished = True
+                self.animation_timer = 0.0
+                break
+
+    def _draw_character(self, surface: pygame.Surface, draw_x: int, draw_y: int) -> None:
+        if not self.animation_name:
+            return
+        frame = self.animations[self.animation_name][self.animation_frame]
+        display_size = (frame.get_width() * 5 // 2, frame.get_height() * 5 // 2)
+        scaled_frame = pygame.transform.scale(frame, display_size)
+        scaled_frame.set_alpha(self.current_alpha)
+        frame_x = draw_x + (self.width - display_size[0]) // 2
+        frame_y = draw_y + self.height - display_size[1]
+        surface.blit(scaled_frame, (frame_x, frame_y))
 
     def trigger_damage_flash(self, duration: float = 0.2) -> None:
         """Flash branco ao receber dano."""
         self.flash_timer = duration
+        if self.entity and self.entity.is_alive():
+            self.set_animation("hurt", loop=False)
 
     def trigger_attack_feedback(self, duration: float = 0.1) -> None:
         """Ativa o feedback visual do momento do ataque."""
         self.attack_feedback_timer = duration
+        self.set_animation("attack", loop=False)
 
     def update_visual_state(self) -> None:
         """
-        Isole a seleção de cor / apresentação visual baseada no estado atual.
-        Estrutura modular: no futuro, substitua 'current_render_color' por 'set_animation(...)'.
+        Atualiza as cores de feedback e a animação baseada no estado atual.
         """
         if not self.entity:
             return
 
+        self._select_animation()
         current_state = self.entity.state
         team = getattr(self.entity, "team", "aliado")
 
@@ -621,19 +749,16 @@ class SpriteComponent(Component):
             # MORTO: Cinza com 50% de opacidade (Alpha = 128)
             self.current_render_color = config.COLOR_STATE_DEAD
             self.current_alpha = 128
-            # FUTURO: self.set_animation("die") ou self.set_animation("dead")
 
         elif self.attack_feedback_timer > 0 or current_state == EntityState.ATACANDO:
             # ATACANDO: Vermelho ou Flash Branco por 0.1s
             self.current_render_color = config.COLOR_STATE_ATTACK_FLASH if self.attack_feedback_timer > 0.05 else config.COLOR_STATE_ATTACKING
             self.current_alpha = 255
-            # FUTURO: self.set_animation("attack")
 
         elif current_state == EntityState.PREPARANDO:
             # PREPARANDO: Amarelo (aguardando/carregando cooldown no range)
             self.current_render_color = config.COLOR_STATE_PREPARING
             self.current_alpha = 255
-            # FUTURO: self.set_animation("idle") ou self.set_animation("ready")
 
         elif current_state == EntityState.ANDANDO:
             # ANDANDO: Azul (Aliados) / Laranja (Inimigos)
@@ -642,7 +767,6 @@ class SpriteComponent(Component):
             else:
                 self.current_render_color = config.COLOR_STATE_WALK_ENEMY
             self.current_alpha = 255
-            # FUTURO: self.set_animation("walk")
 
         else:
             self.current_render_color = self.base_color
@@ -663,6 +787,7 @@ class SpriteComponent(Component):
 
         # Atualiza a cor/apresentação visual de acordo com a máquina de estados
         self.update_visual_state()
+        self._advance_animation(dt)
 
     def draw(self, surface: pygame.Surface, font_bold: pygame.font.Font, font_small: pygame.font.Font) -> None:
         if not self.entity:
@@ -670,6 +795,12 @@ class SpriteComponent(Component):
 
         health = self.entity.get_component(HealthComponent)
         if health and not health.is_alive():
+            if not self.animations or self.animation_name != "death" or self.animation_finished:
+                return
+            transform = self.entity.get_component(TransformComponent)
+            draw_x = int(transform.x if transform else 0) + self.shake_offset_x
+            draw_y = int(transform.y if transform else 0) + self.shake_offset_y
+            self._draw_character(surface, draw_x, draw_y)
             return
 
         transform = self.entity.get_component(TransformComponent)
@@ -681,26 +812,29 @@ class SpriteComponent(Component):
         # Superfície do sprite com suporte a transparência (Alpha)
         sprite_w = self.width + 10
         sprite_h = self.height + 15
-        sprite_surf = pygame.Surface((sprite_w, sprite_h), pygame.SRCALPHA)
-
-        # Sombra sob o personagem
-        shadow_rect = pygame.Rect(5, 10, self.width, self.height)
-        pygame.draw.rect(sprite_surf, self.shadow_color, shadow_rect, border_radius=12)
-
-        # Cor do corpo baseada no estado visual atual (ou flash de dano)
-        if self.flash_timer > 0:
-            main_color = (255, 255, 255)
+        if self.animation_name:
+            self._draw_character(surface, draw_x, draw_y)
         else:
-            main_color = self.current_render_color
+            sprite_surf = pygame.Surface((sprite_w, sprite_h), pygame.SRCALPHA)
 
-        char_rect = pygame.Rect(0, 0, self.width, self.height)
-        pygame.draw.rect(sprite_surf, main_color, char_rect, border_radius=12)
-        pygame.draw.rect(sprite_surf, config.COLOR_PANEL_BORDER, char_rect, width=2, border_radius=12)
+            # Sombra sob o personagem
+            shadow_rect = pygame.Rect(5, 10, self.width, self.height)
+            pygame.draw.rect(sprite_surf, self.shadow_color, shadow_rect, border_radius=12)
 
-        # Aplica opacidade
-        sprite_surf.set_alpha(self.current_alpha)
+            # Cor do corpo baseada no estado visual atual (ou flash de dano)
+            if self.flash_timer > 0:
+                main_color = (255, 255, 255)
+            else:
+                main_color = self.current_render_color
 
-        surface.blit(sprite_surf, (draw_x, draw_y))
+            char_rect = pygame.Rect(0, 0, self.width, self.height)
+            pygame.draw.rect(sprite_surf, main_color, char_rect, border_radius=12)
+            pygame.draw.rect(sprite_surf, config.COLOR_PANEL_BORDER, char_rect, width=2, border_radius=12)
+
+            # Aplica opacidade
+            sprite_surf.set_alpha(self.current_alpha)
+
+            surface.blit(sprite_surf, (draw_x, draw_y))
 
         # Elementos de UI sobre a entidade
         current_state = self.entity.state

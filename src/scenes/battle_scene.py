@@ -78,7 +78,17 @@ class BattleScene(BaseScene, Observador):
         self.hero.add_component(MovementComponent(speed=config.WARRIOR_SPEED, default_direction=1.0))
         self.hero.add_component(CombatComponent(dano=18, alcance=config.WARRIOR_ATTACK_RANGE, cooldown=config.ATTACK_COOLDOWN_DEFAULT))
         self.hero.add_component(TargetingComponent())
-        self.hero.add_component(SpriteComponent(width=100, height=140, color=config.COLOR_HERO, shadow_color=config.COLOR_HERO_SHADOW))
+        self.hero.add_component(SpriteComponent(
+            width=100,
+            height=140,
+            color=config.COLOR_HERO,
+            shadow_color=config.COLOR_HERO_SHADOW,
+            sprite_sheet_path=config.DUELIST_SPRITE_PATH,
+            frame_size=config.DUELIST_FRAME_SIZE,
+            animations=config.DUELIST_ANIMATIONS,
+            animation_rects=config.DUELIST_ANIMATION_RECTS,
+            animation_fps=config.DUELIST_ANIMATION_FPS,
+        ))
 
         self.mage = Entity(name="Mago", team="aliado")
         self.mage.add_component(TransformComponent(x=mage_x, y=ground_y, width=100, height=140))
@@ -185,8 +195,7 @@ class BattleScene(BaseScene, Observador):
         if not ally.is_alive():
             return
 
-        recent_damage = sum(opportunity.damage_taken for opportunity in opportunities)
-        recovery = int(recent_damage * config.RALLY_RECOVERY_RATIO)
+        recovery = self._rally_recovery_amount(ally, opportunities)
         amount_recovered = ally.heal(recovery)
         if amount_recovered > 0:
             self.floating_texts.append(
@@ -194,9 +203,26 @@ class BattleScene(BaseScene, Observador):
                     f"RALLY +{amount_recovered}",
                     int(ally.x) + 10,
                     int(ally.y) - 40,
-                    config.COLOR_TEXT_GOLD
+                    config.COLOR_RALLY_NEON
                 )
             )
+
+    def _rally_recovery_amount(
+        self,
+        ally: Entity,
+        opportunities: Optional[list[RallyOpportunity]] = None,
+    ) -> int:
+        if not ally.is_alive():
+            return 0
+
+        if opportunities is None:
+            opportunities = [
+                opportunity for opportunity in self.rally_opportunities
+                if opportunity.ally is ally and opportunity.time_left > 0
+            ]
+        recent_damage = sum(opportunity.damage_taken for opportunity in opportunities)
+        recovery = int(recent_damage * config.RALLY_RECOVERY_RATIO)
+        return min(recovery, ally.max_hp - ally.current_hp)
 
     def _try_critical(self, enemy: Entity) -> None:
         if self.critical_cooldown_timer > 0:
@@ -270,17 +296,28 @@ class BattleScene(BaseScene, Observador):
             )
 
         for ally, time_left in active_rallies.items():
+            if self._rally_recovery_amount(ally) <= 0:
+                continue
+
+            outline = ally.rect.inflate(8, 8)
             pygame.draw.rect(
                 surface,
-                config.COLOR_TEXT_GOLD,
-                ally.rect.inflate(8, 8),
+                (0, 110, 30),
+                outline.inflate(4, 4),
+                width=7,
+                border_radius=18
+            )
+            pygame.draw.rect(
+                surface,
+                config.COLOR_RALLY_NEON,
+                outline,
                 width=3,
                 border_radius=14
             )
             label = self.game.font_small.render(
                 f"RALLY {time_left:.1f}s",
                 True,
-                config.COLOR_TEXT_GOLD
+                config.COLOR_RALLY_NEON
             )
             label_rect = label.get_rect(center=(ally.rect.centerx, ally.rect.top - 94))
             surface.blit(label, label_rect)

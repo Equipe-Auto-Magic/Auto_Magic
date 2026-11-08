@@ -129,6 +129,31 @@ class ReactionMechanicsTests(unittest.TestCase):
 
         self.assertEqual(ally.current_hp, ally.max_hp)
         self.assertEqual(scene.floating_texts[0].text, "RALLY +5")
+        self.assertEqual(scene.floating_texts[0].color, config.COLOR_RALLY_NEON)
+
+    def test_rally_neon_outline_only_shows_when_healing_is_possible(self):
+        pygame.font.init()
+        scene = make_scene()
+        scene.game = SimpleNamespace(font_small=pygame.font.Font(None, 14))
+        ally = make_entity("Herói", "aliado", hp=100, x=100)
+        enemy = make_entity("Goblin", "inimigo", hp=50, x=500)
+        ally.current_hp = 50
+        scene.rally_opportunities.append(
+            RallyOpportunity(enemy, ally, 20, config.RALLY_WINDOW_SECONDS)
+        )
+        surface = pygame.Surface((300, 300))
+        surface.fill((20, 30, 40))
+
+        scene._draw_reaction_targets(surface)
+
+        self.assertEqual(surface.get_at((96, 150))[:3], config.COLOR_RALLY_NEON)
+
+        ally.current_hp = ally.max_hp
+        surface.fill((20, 30, 40))
+
+        scene._draw_reaction_targets(surface)
+
+        self.assertEqual(surface.get_at((96, 150))[:3], (20, 30, 40))
 
     def test_clicking_recently_damaged_ally_activates_rally(self):
         scene = make_scene()

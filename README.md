@@ -28,12 +28,15 @@ enxuto: usa um Herói e um Mago fixos, sem seleção de elenco ou tela de prepar
 - Inimigos corpo a corpo e de longo alcance podem priorizar a linha de frente, a
   retaguarda ou o aliado com menor proporção de vida.
 - Rally: após um aliado receber dano, clique nele em até um segundo para recuperar
-  50% do dano recente, sem exceder a vida máxima.
+  50% do dano recente, sem exceder a vida máxima. Um contorno verde neon indica
+  quando o clique pode recuperar vida.
 - Critical: após um aliado atingir um inimigo, clique nesse inimigo em até um
   segundo para aplicar um bônus de dano de 25%. Há uma recarga global de cinco
   segundos entre Criticals.
 - Indicadores de vida, dano, recarga e estado, além de números flutuantes de dano e
   feedback visual para ataque, dano e derrota.
+- O guerreiro usa a coleção de sprites `PC - Duelist.png`, com animações de parado,
+  caminhada, ataque, dano e morte; os demais combatentes ainda usam formas coloridas.
 - Cada sala tem três inimigos, combinando combatentes corpo a corpo e de longo
   alcance.
 - Duas fases com duas salas cada: Floresta Sombria e Santuário Oculto.
@@ -44,10 +47,9 @@ enxuto: usa um Herói e um Mago fixos, sem seleção de elenco ou tela de prepar
 - `Esc` durante a batalha retorna imediatamente ao menu.
 
 O MVP ainda não tem seleção de heróis, preparação tática, pausa, revanche por botão,
-pontuação, salvamento, áudio ou integração dos sprites de personagens com a arena.
-Os combatentes são desenhados com formas coloridas. A história, a preparação de
-equipe e as melhorias visuais e sonoras fazem parte da direção planejada, não do
-fluxo jogável atual.
+pontuação, salvamento, áudio ou sprites para o mago e os inimigos. A história, a
+preparação de equipe e as melhorias visuais e sonoras fazem parte da direção
+planejada, não do fluxo jogável atual.
 
 ## Fases e encontros
 
@@ -83,6 +85,8 @@ No Windows, também é possível iniciar com `run.bat`.
 ├── run.bat
 ├── assets/
 │   └── images/
+│       └── Characters/
+│           └── PC - Duelist.png
 ├── docs/
 │   ├── componentes/
 │   │   └── Componentes.md
@@ -118,8 +122,8 @@ No Windows, também é possível iniciar com `run.bat`.
 - `src/stage_manager.py`: progressão entre salas, fases e resultados.
 - `src/events.py`: eventos do jogo e habilidade passiva de fúria.
 - `src/scenes/`: menu e cena de batalha.
-- `assets/images/`: imagens de personagens e cenários; a integração dos personagens
-  à arena ainda está pendente.
+- `assets/images/`: imagens de personagens e cenários; `PC - Duelist.png` anima o
+  guerreiro na arena.
 
 O loop principal usa atualizações de lógica em passo fixo de 1/60 segundo e limita
 a renderização a 60 FPS. O jogo é local e para um jogador; multiplayer, contas,

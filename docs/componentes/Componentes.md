@@ -17,10 +17,10 @@ No jogo, cada combatente é montado com estes seis componentes:
 | `MovementComponent` | Desloca a unidade de acordo com sua velocidade e com a direção definida pelo componente de alvo. |
 | `HealthComponent` | Controla a vida atual e máxima, aplica dano e identifica quando a unidade morre. Após aplicar dano, publica `dano_recebido` com atacante, alvo e quantidade efetiva; a morte também gera `entidade_morta`. |
 | `CombatComponent` | Guarda dano, alcance e tempo de recarga. Determina quando a unidade está pronta para atacar, desde que tenha um alvo válido e esteja no alcance. |
-| `SpriteComponent` | Apresenta a unidade e seu estado, incluindo nome, vida, recarga, dano e feedback visual de ataque e dano. Unidades derrotadas deixam de ser desenhadas. |
+| `SpriteComponent` | Apresenta a unidade e seu estado, incluindo nome, vida, recarga, dano e feedback visual de ataque e dano. Também pode animar uma folha de sprites; o guerreiro usa `PC - Duelist.png` para parado, caminhada, ataque, dano e morte. Unidades derrotadas são ocultadas após a animação de morte. |
 
-No MVP, o `SpriteComponent` desenha os combatentes com formas e cores; os sprites
-definitivos ainda não estão integrados à arena.
+O guerreiro usa o sprite sheet em `assets/images/Characters/PC - Duelist.png`.
+O mago e os inimigos continuam desenhados com formas e cores.
 
 ## Como os componentes trabalham juntos
 
@@ -32,7 +32,10 @@ definitivos ainda não estão integrados à arena.
 4. A `BattleScene` coordena o ataque e informa o atacante ao aplicar dano. O
    `HealthComponent` do alvo atualiza a vida e publica `dano_recebido`; a morte,
    quando ocorre, publica também `entidade_morta`.
-5. Como observadora de `dano_recebido`, a `BattleScene` registra janelas de reação:
+5. O `SpriteComponent` acompanha o estado da entidade e seleciona a animação do
+   guerreiro; os ataques, danos e derrotas também podem iniciar sequências de quadros
+   sem alterar as regras de combate.
+6. Como observadora de `dano_recebido`, a `BattleScene` registra janelas de reação:
    o jogador pode clicar no aliado ferido para ativar Rally ou no inimigo atingido
    para ativar Critical. O evento registra o resultado do dano, mas não delega a
    alteração de vida ao observador.
