@@ -88,6 +88,7 @@ class BattleScene(BaseScene, Observador):
             animations=config.DUELIST_ANIMATIONS,
             animation_rects=config.DUELIST_ANIMATION_RECTS,
             animation_fps=config.DUELIST_ANIMATION_FPS,
+            sprite_faces_right=config.DUELIST_SPRITE_FACES_RIGHT,
         ))
 
         self.mage = Entity(name="Mago", team="aliado")

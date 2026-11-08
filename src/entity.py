@@ -581,7 +581,8 @@ class SpriteComponent(Component):
                  frame_size: tuple[int, int] = (50, 48),
                  animations: Optional[Dict[str, List[int]]] = None,
                  animation_rects: Optional[Dict[str, List[tuple[int, int, int, int]]]] = None,
-                 animation_fps: int = 10):
+                 animation_fps: int = 10,
+                 sprite_faces_right: bool = False):
         super().__init__()
         self.width: int = width
         self.height: int = height
@@ -596,6 +597,7 @@ class SpriteComponent(Component):
         self.shake_offset_x: int = 0
         self.shake_offset_y: int = 0
         self.animations: Dict[str, List[pygame.Surface]] = {}
+        self.sprite_faces_right = sprite_faces_right
         self.animation_fps = animation_fps
         self.animation_name: Optional[str] = None
         self.animation_frame = 0
@@ -718,10 +720,33 @@ class SpriteComponent(Component):
         frame = self.animations[self.animation_name][self.animation_frame]
         display_size = (frame.get_width() * 5 // 2, frame.get_height() * 5 // 2)
         scaled_frame = pygame.transform.scale(frame, display_size)
+        scaled_frame = pygame.transform.flip(
+            scaled_frame,
+            self._should_flip_horizontally(),
+            False,
+        )
         scaled_frame.set_alpha(self.current_alpha)
         frame_x = draw_x + (self.width - display_size[0]) // 2
         frame_y = draw_y + self.height - display_size[1]
         surface.blit(scaled_frame, (frame_x, frame_y))
+
+    def _should_flip_horizontally(self) -> bool:
+        if not self.entity:
+            return False
+
+        target = self.entity.target
+        if target and target.is_alive():
+            faces_right = target.rect.centerx > self.entity.rect.centerx
+        else:
+            movement = self.entity.get_component(MovementComponent)
+            direction = movement.current_direction if movement else 0.0
+            if direction == 0.0 and movement:
+                direction = movement.default_direction
+            if direction == 0.0:
+                direction = 1.0 if self.entity.team == "aliado" else -1.0
+            faces_right = direction > 0
+
+        return faces_right != self.sprite_faces_right
 
     def trigger_damage_flash(self, duration: float = 0.2) -> None:
         """Flash branco ao receber dano."""

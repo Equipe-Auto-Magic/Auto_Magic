@@ -25,6 +25,7 @@ class DuelistAnimationTests(unittest.TestCase):
             animations=config.DUELIST_ANIMATIONS,
             animation_rects=config.DUELIST_ANIMATION_RECTS,
             animation_fps=config.DUELIST_ANIMATION_FPS,
+            sprite_faces_right=config.DUELIST_SPRITE_FACES_RIGHT,
         )
         entity.add_component(sprite)
         return entity, sprite
@@ -50,6 +51,19 @@ class DuelistAnimationTests(unittest.TestCase):
         )
         self.assertEqual(sprite.animations["idle"][0].get_colorkey()[:3], (82, 109, 140))
 
+    def test_duelist_faces_toward_its_target(self):
+        entity, sprite = self.make_duelist_sprite()
+        target = Entity(name="Inimigo", team="inimigo")
+        target.add_component(TransformComponent(x=500, y=100))
+        target.add_component(HealthComponent(max_hp=100))
+        entity.target = target
+
+        self.assertTrue(sprite._should_flip_horizontally())
+
+        target.x = 0
+
+        self.assertFalse(sprite._should_flip_horizontally())
+
     def test_draws_duelist_without_the_sheet_background(self):
         _, sprite = self.make_duelist_sprite()
         pygame.font.init()
@@ -61,7 +75,7 @@ class DuelistAnimationTests(unittest.TestCase):
         sprite.draw(surface, font, font)
 
         self.assertEqual(surface.get_at((199, 239))[:3], background_color)
-        self.assertNotEqual(surface.get_at((100, 125))[:3], background_color)
+        self.assertNotEqual(surface.get_at((150, 140))[:3], background_color)
 
     def test_selects_walk_and_idle_from_entity_state(self):
         entity, sprite = self.make_duelist_sprite()
