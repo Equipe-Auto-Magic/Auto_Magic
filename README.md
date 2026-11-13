@@ -67,21 +67,42 @@ segundo os parâmetros de suas classes.
 
 ## Executar
 
-Requer Python 3 e Pygame-CE (`pygame-ce>=2.5.0`).
+Requer [uv](https://docs.astral.sh/uv/getting-started/installation/), que precisa
+ser instalado uma vez em cada máquina. No Windows, é possível instalá-lo pelo
+PowerShell com:
 
-```bash
-python -m pip install -r requirements.txt
-python main.py
+```powershell
+winget install --id astral-sh.uv -e
 ```
 
-No Windows, também é possível iniciar com `run.bat`.
+Após a instalação, feche e reabra o terminal. O projeto usa Python 3.12, definido
+em `.python-version`; se essa versão não estiver instalada, o `uv` pode baixá-la.
+Ao sincronizar o projeto, o `uv` cria o ambiente virtual local `.venv` e instala
+nele o Pygame-CE e as dependências registradas em `uv.lock`. Esse ambiente não é
+versionado pelo Git.
+
+```bash
+uv sync
+uv run main.py
+```
+
+Também é possível executar `uv run main.py` diretamente: ele sincroniza o
+ambiente automaticamente quando necessário. No Windows, `run.bat` executa esse
+comando; se o `uv` não estiver instalado, informa como instalá-lo. Para executar
+os testes:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
 
 ## Estrutura do projeto
 
 ```text
 .
 ├── main.py
-├── requirements.txt
+├── pyproject.toml
+├── uv.lock
+├── .python-version
 ├── run.bat
 ├── assets/
 │   └── images/

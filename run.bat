@@ -1,9 +1,13 @@
 @echo off
-set PYTHON_PATH="%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+cd /d "%~dp0"
 
-if exist %PYTHON_PATH% (
-    %PYTHON_PATH% main.py
-) else (
-    python main.py
+where uv >nul 2>nul
+if errorlevel 1 (
+    echo uv nao foi encontrado. Instale-o seguindo:
+    echo https://docs.astral.sh/uv/getting-started/installation/
+    pause
+    exit /b 1
 )
-pause
+
+uv run main.py
+if errorlevel 1 pause

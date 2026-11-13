@@ -7,6 +7,7 @@ from src import config
 from src.entity import (
     Entity,
     HealthComponent,
+    MovementComponent,
     SpriteComponent,
     TargetingComponent,
     TransformComponent,
@@ -40,6 +41,21 @@ def make_scene():
 
 
 class ReactionMechanicsTests(unittest.TestCase):
+    def test_entities_do_not_move_during_battle_transitions(self):
+        scene = make_scene()
+        scene.stage_manager.state = StageState.TRANSICAO
+        scene.stage_manager.update = lambda dt: None
+        entity = make_entity("Herói", "aliado", hp=100, x=100)
+        movement = MovementComponent(speed=10)
+        movement.current_direction = 1.0
+        entity.add_component(movement)
+        scene.time_aliados = [entity]
+        scene.time_inimigos = []
+
+        scene.update(1.0)
+
+        self.assertEqual(entity.x, 100)
+
     def test_damage_event_creates_reaction_opportunities(self):
         scene = make_scene()
         ally = make_entity("Herói", "aliado", hp=100, x=100)

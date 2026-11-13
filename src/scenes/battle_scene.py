@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Optional
+
 import pygame
 from src import config
 from src.entity import (
@@ -388,13 +390,17 @@ class BattleScene(BaseScene, Observador):
         is_transition = self.stage_manager.state in (StageState.TRANSICAO, StageState.FASE_CONCLUIDA)
         self._update_reaction_opportunities(dt, is_transition or is_game_over)
 
+        # Durante transições ou fim de jogo, o combate direto fica pausado
+        if is_transition or is_game_over:
+            for entidade in self.todas_entidades():
+                sprite = entidade.get_component(SpriteComponent)
+                if sprite:
+                    sprite.update(dt)
+            return
+
         # Atualiza movimentação/estado dos personagens
         for entidade in self.todas_entidades():
             entidade.update(dt)
-
-        # Durante transições ou fim de jogo, o combate direto fica pausado
-        if is_transition or is_game_over:
-            return
 
         # --- LOOP DE COMBATE AUTÔNOMO ENTRE TIMES ---
         for attacker in self.todas_entidades():
